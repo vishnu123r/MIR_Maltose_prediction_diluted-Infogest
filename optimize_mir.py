@@ -23,9 +23,8 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation):
     Returns:
         list: Returns a list of calibration values for given wavenumber regions and hyper parameters
     """
-    if sample_presentation not in ["'Turbid'", "'Supernatant'"]:
-        print("The Argument Sample presentaion should either be 'Turbid' or 'Supernatant'")
-        return "The Argument Sample presentaion should either be 'Turbid' or 'Supernatant'"
+    if sample_presentation not in ["Turbid", "Supernatant"]:
+        raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
     
     df = df[df['supernatant'] == sample_presentation]
     y = df['maltose_concentration'].values
@@ -48,26 +47,28 @@ if __name__ == '__main__':
     drop_columns = ['Technical_rep']
 
     #Read CSV and Drop columns
-    df_old = pd.read_csv("data/dil_mir_all_noPregell.csv")
+    df_old = pd.read_csv("data/dil+infogest_mir_all_conc.csv")
     df = df_old.drop(drop_columns,  axis= 1)
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[5:])
+    wavenumbers_old = list(df.columns[7:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
     df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
+    
 
     #Segment into supernatant and turbid
-    df_turbid = df[df['supernatant'] == "'Turbid'"]
-    df_SN = df[df['supernatant'] == "'Supernatant'"]
+    df_turbid = df[df['supernatant'] == "Turbid"]
+    df_SN = df[df['supernatant'] == "Supernatant"]
 
     #Selecting Wavenumbers
     wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
     wavenumbers_1500_800 = get_wavenumber_range(wavenumbers, 1500, 800)
     wavenumbers_1250_909 = get_wavenumber_range(wavenumbers, 1250, 909)
 
+    #defining Hyper parameters
     wavenumber_regions = [wavenumbers_3998_800, wavenumbers_1500_800, wavenumbers_1250_909]
     sg_parameters = [(1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
 
@@ -76,13 +77,15 @@ if __name__ == '__main__':
     descriptive_y = df_turbid['maltose_concentration'].describe().to_frame().T
     descriptive_y['Coe_variation'] = descriptive_y['std']/descriptive_y['mean']
 
-    model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "'Turbid'")
-    model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "'Supernatant'")
+    model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid")
+    model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant")
+
+    print("Heloo---{}".format(model_stats_turbid))
 
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
 
-    with pd.ExcelWriter('output_mir_maltose_no_pr.xlsx') as writer:
+    with pd.ExcelWriter('output_dil+infogest_mir_maltose_all.xlsx') as writer:
         descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')
