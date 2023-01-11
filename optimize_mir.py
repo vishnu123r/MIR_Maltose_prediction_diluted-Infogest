@@ -47,7 +47,7 @@ if __name__ == '__main__':
     drop_columns = ['Technical_rep']
 
     #Read CSV and Drop columns
-    df_old = pd.read_csv("data/dil+infogest_mir_all_conc.csv")
+    df_old = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
     df = df_old.drop(drop_columns,  axis= 1)
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
@@ -70,8 +70,11 @@ if __name__ == '__main__':
 
     #defining Hyper parameters
     wavenumber_regions = [wavenumbers_3998_800, wavenumbers_1500_800, wavenumbers_1250_909]
-    sg_parameters = [(1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
+    sg_parameters = [(1,9),(1,7), (1,5), (1,3), (2, 9), (2, 7), (2,5), (1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
 
+    # wavenumber_regions = [wavenumbers_1250_909]
+    # sg_parameters = [(1,9)]
+    
     #Get descriptive stats of Y
     y = df_turbid['maltose_concentration'].values
     descriptive_y = df_turbid['maltose_concentration'].describe().to_frame().T
@@ -80,12 +83,10 @@ if __name__ == '__main__':
     model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid")
     model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant")
 
-    print("Heloo---{}".format(model_stats_turbid))
-
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
 
-    with pd.ExcelWriter('output_dil+infogest_mir_maltose_all.xlsx') as writer:
+    with pd.ExcelWriter('output_dil+infogest_mir_maltose_noPr.xlsx') as writer:
         descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')

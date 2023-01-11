@@ -127,27 +127,29 @@ if __name__ == '__main__':
     drop_columns = ['Technical_rep']
 
     #Read CSV and Drop columns
-    df_old = pd.read_csv("data/dil_mir_all.csv")
+    df_old = pd.read_csv("data/dil+infogest_mir_all_conc.csv")
     df = df_old.drop(drop_columns,  axis= 1)
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[5:])
+    wavenumbers_old = list(df.columns[7:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
     df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
 
     #Segment into supernatant and turbid
-    df_turbid = df[df['supernatant'] == "'Turbid'"]
-    df_SN = df[df['supernatant'] == "'Supernatant'"]
+    df_turbid = df[df['supernatant'] == "Turbid"]
+    df_SN = df[df['supernatant'] == "Supernatant"]
 
     #Selecting Wavenumbers and assign x and Y values
     wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
-    X = df_turbid[wavenumbers_3998_800].values
-    X = savgol_filter(X, 51, 2, 2)
-    y = df_turbid['maltose_concentration'].values
+    X = df_SN[wavenumbers_3998_800].values
+    X = savgol_filter(X, 31, 2, 2)
+    y = df_SN['maltose_concentration'].values
     
+
+    ### LOdings Plot
     y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
     factor1_load = x_load[:,0]
 
