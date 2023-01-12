@@ -122,6 +122,54 @@ def conduct_pls(components, X, y):
 def loadings_plot():
     pass
 
+def plot_q_t_plot(X, y, ncomp):
+
+    #### To get Q^2 vs T^2 plot
+    # Define PLS object
+    pls = PLSRegression(n_components=ncomp)
+    # Fit data
+    pls.fit(X, y)
+ 
+    # Get X scores
+    T = pls.x_scores_
+    # Get X loadings
+    P = pls.x_loadings_
+ 
+    # Calculate error array
+    Err = X - np.dot(T,P.T)
+ 
+    # Calculate Q-residuals (sum over the rows of the error array)
+    Q = np.sum(Err**2, axis=1)
+ 
+    # Calculate Hotelling's T-squared (note that data are normalised by default)
+    Tsq = np.sum((pls.x_scores_/np.std(pls.x_scores_, axis=0))**2, axis=1)
+
+    # set the confidence level
+    conf = 0.95
+ 
+
+    # Calculate confidence level for T-squared from the ppf of the F distribution
+    Tsq_conf =  f.ppf(q=conf, dfn=ncomp, \
+            dfd=X.shape[0])*ncomp*(X.shape[0]-1)/(X.shape[0]-ncomp)
+ 
+    # Estimate the confidence level for the Q-residuals
+    i = np.max(Q)+1
+    while 1-np.sum(Q>i)/np.sum(Q>0) > conf:
+        i -= 1
+    Q_conf = i
+
+    ax = plt.figure(figsize=(8,4.5))
+    with plt.style.context(('ggplot')):
+        plt.plot(Tsq, Q, 'o')
+ 
+        plt.plot([Tsq_conf,Tsq_conf],[plt.axis()[2],plt.axis()[3]],  '--')
+        plt.plot([plt.axis()[0],plt.axis()[1]],[Q_conf,Q_conf],  '--')
+        plt.xlabel("Hotelling's T-squared")
+        plt.ylabel('Q residuals')
+ 
+    plt.show()
+
+
 
 if __name__ == '__main__':
     drop_columns = ['Technical_rep']

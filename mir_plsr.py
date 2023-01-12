@@ -1,4 +1,4 @@
-from functions import conduct_pls
+from functions import conduct_pls, plot_q_t_plot
 from optimize_mir import get_wavenumber_range
 
 import numpy as np
@@ -9,92 +9,60 @@ from scipy.signal import savgol_filter
 from sklearn.cross_decomposition import PLSRegression
 from scipy.stats import f
 
+def format_df(df):
 
-drop_columns = ['Technical_rep']
+    ### This function formats df for further analysis
 
-#Read CSV and Drop columns
-df_old = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
-df = df_old.drop(drop_columns,  axis= 1)
-df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
+    #Drop columns and rename
+    drop_columns = ['Technical_rep']
+    df = df.drop(drop_columns,  axis= 1)
+    df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
-#Change wavenumber to whole numbers
-wavenumbers_old = list(df.columns[7:])
-wavenumbers = list(map(float, wavenumbers_old))
-wavenumbers = list(map(round, wavenumbers))
-wavenumbers = list(map(str, wavenumbers))
-df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
+    #Change wavenumber to whole numbers
+    wavenumbers_old = list(df.columns[7:])
+    wavenumbers = list(map(float, wavenumbers_old))
+    wavenumbers = list(map(round, wavenumbers))
+    wavenumbers = list(map(str, wavenumbers))
+    df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
+    
+    return df
+
+def convert_to_arrays(df, sample_presentation, wavenumber_region):
+
+    """Converts dataframe in to arrays which can be used to do PLSR"""
+
+    if sample_presentation not in ["Turbid", "Supernatant"]:
+        raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
+
+    df = df[df['supernatant'] == sample_presentation]
 
 
+    X = df[wavenumber_region].values
+    y = df['maltose_concentration'].values
 
-#Segment into supernatant and turbid
-df_turbid = df[df['supernatant'] == "Turbid"]
-df_SN = df[df['supernatant'] == "Supernatant"]
+    return X, y
 
+
+df_cal = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
+df_val = pd.read_csv("data/dil+infogest_validation_mir.csv")
+
+df_cal= format_df(df_cal)
+df_val= format_df(df_val)
+    
 #Selecting Wavenumbers and assign x and Y values
+wavenumbers = list(df_cal.columns[7:])
 wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
 
+#supernatant
+X_cal_sn,y_cal_sn = convert_to_arrays(df_cal, "Supernatant", wavenumbers_3998_800)
+X_cal_sn = savgol_filter(X_cal_sn, 11, 2, 2)
+
+#Apply PLSR
+ncomp = 5
+y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(ncomp, X_cal_sn, y_cal_sn)
 
 
 
-# #Turbid
-# X = df_turbid[wavenumbers_3998_800].values
-# y = df_turbid['maltose_concentration'].values
-
-#Supernatant
-X = df_SN[wavenumbers_3998_800].values
-y = df_SN['maltose_concentration'].values
-
-X = savgol_filter(X, 11, 2, 2)
-
-
-#### To get Q^2 vs T^2 plot
-ncomp = 4
-# Define PLS object
-pls = PLSRegression(n_components=ncomp)
-# Fit data
-pls.fit(X, y)
- 
-# Get X scores
-T = pls.x_scores_
-# Get X loadings
-P = pls.x_loadings_
- 
-# Calculate error array
-Err = X - np.dot(T,P.T)
- 
-# Calculate Q-residuals (sum over the rows of the error array)
-Q = np.sum(Err**2, axis=1)
- 
-# Calculate Hotelling's T-squared (note that data are normalised by default)
-Tsq = np.sum((pls.x_scores_/np.std(pls.x_scores_, axis=0))**2, axis=1)
-
-# set the confidence level
-conf = 0.95
- 
-
-# Calculate confidence level for T-squared from the ppf of the F distribution
-Tsq_conf =  f.ppf(q=conf, dfn=ncomp, \
-            dfd=X.shape[0])*ncomp*(X.shape[0]-1)/(X.shape[0]-ncomp)
- 
-# Estimate the confidence level for the Q-residuals
-i = np.max(Q)+1
-while 1-np.sum(Q>i)/np.sum(Q>0) > conf:
-    i -= 1
-Q_conf = i
-
-ax = plt.figure(figsize=(8,4.5))
-with plt.style.context(('ggplot')):
-    plt.plot(Tsq, Q, 'o')
- 
-    plt.plot([Tsq_conf,Tsq_conf],[plt.axis()[2],plt.axis()[3]],  '--')
-    plt.plot([plt.axis()[0],plt.axis()[1]],[Q_conf,Q_conf],  '--')
-    plt.xlabel("Hotelling's T-squared")
-    plt.ylabel('Q residuals')
- 
-plt.show()
-
-# #Apply PLSR
-# y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
 
 # #plot y range values 
 # rangey = max(y) - min(y)
