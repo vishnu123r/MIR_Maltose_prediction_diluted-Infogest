@@ -8,6 +8,27 @@ from scipy.signal import savgol_filter
 
 from sklearn.cross_decomposition import PLSRegression
 from scipy.stats import f
+from sklearn.model_selection import cross_val_predict, LeaveOneOut, cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+
+from math import sqrt
+
+############# ----INPUTS---- ##############
+cal_file_location = "data/dil+infogest_mir_noPrRice_conc.csv"
+val_file_location = "data/infogest_validation_mir.csv"
+
+start_WN = 3998
+end_WN = 800
+
+sg_smoothing_point = 31
+sg_derivative = 1
+sg_polynomial = 2
+
+no_of_components = 5
+
+sample_presentation = "Supernatant"
+#sample_presentation = "Turbid"
+#################
 
 def format_df(df):
 
@@ -43,24 +64,62 @@ def convert_to_arrays(df, sample_presentation, wavenumber_region):
     return X, y
 
 
-df_cal = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
-df_val = pd.read_csv("data/dil+infogest_validation_mir.csv")
+df_cal = pd.read_csv(cal_file_location)
+df_val = pd.read_csv(val_file_location)
 
 df_cal= format_df(df_cal)
 df_val= format_df(df_val)
-    
+
+
 #Selecting Wavenumbers and assign x and Y values
 wavenumbers = list(df_cal.columns[7:])
-wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
+wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
-#supernatant
-X_cal_sn,y_cal_sn = convert_to_arrays(df_cal, "Supernatant", wavenumbers_3998_800)
-X_cal_sn = savgol_filter(X_cal_sn, 11, 2, 2)
+#X,y arrays - Calibration
+X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers_3998_800)
+X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+
+#X.y Arrays - External Validation
+X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers_3998_800)
+X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 #Apply PLSR
-ncomp = 5
-y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(ncomp, X_cal_sn, y_cal_sn)
+plsr = PLSRegression(n_components=no_of_components)
+plsr.fit(X_cal, y_cal)
+y_c = np.ravel(plsr.predict(X_cal))
 
+# Cross-validation
+loocv = LeaveOneOut()
+y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
+
+#External Validation
+y_ev = np.ravel(plsr.predict(X_val))
+
+# Calculate scores for calibration, cross-validation, and external-validation
+score_c = r2_score(y_cal, y_c)
+score_cv = r2_score(y_cal, y_cv)
+score_ev = r2_score(y_val, y_ev)
+
+# Calculate RMSE for calibration, cross-validation, and external-validation
+rmse_c = sqrt(mean_squared_error(y_cal, y_c))
+rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
+rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
+
+# Calculate MAE for calibration, cross-validation, and external-validation
+err = (y_ev-y_val)*100/y_val
+df_err = pd.DataFrame({'A': y_val, 'B': err})
+print(df_err)
+
+
+#Print stats
+print('R2 calib: %5.3f'  % score_c)
+print('R2 CV: %5.3f'  % score_cv)
+print('R2 EV: %5.3f'  % score_ev)
+print('RMSE calib: %5.3f' % rmse_c)
+print('RMSE CV: %5.3f' % rmse_cv)
+print('RMSE EV: %5.3f' % rmse_ev)
+
+#y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(ncomp, X_cal_sn, y_cal_sn)
 
 
 
