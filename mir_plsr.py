@@ -14,7 +14,7 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from math import sqrt
 
 ############# ----INPUTS---- ##############
-cal_file_location = "data/dil+infogest_mir_noPrRice_conc.csv"
+cal_file_location = "data/infogest_mir_noPrRice_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
 start_WN = 3998
@@ -30,38 +30,7 @@ sample_presentation = "Supernatant"
 #sample_presentation = "Turbid"
 #################
 
-def format_df(df):
 
-    ### This function formats df for further analysis
-
-    #Drop columns and rename
-    drop_columns = ['Technical_rep']
-    df = df.drop(drop_columns,  axis= 1)
-    df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
-
-    #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[7:])
-    wavenumbers = list(map(float, wavenumbers_old))
-    wavenumbers = list(map(round, wavenumbers))
-    wavenumbers = list(map(str, wavenumbers))
-    df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
-    
-    return df
-
-def convert_to_arrays(df, sample_presentation, wavenumber_region):
-
-    """Converts dataframe in to arrays which can be used to do PLSR"""
-
-    if sample_presentation not in ["Turbid", "Supernatant"]:
-        raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
-
-    df = df[df['supernatant'] == sample_presentation]
-
-
-    X = df[wavenumber_region].values
-    y = df['maltose_concentration'].values
-
-    return X, y
 
 
 df_cal = pd.read_csv(cal_file_location)

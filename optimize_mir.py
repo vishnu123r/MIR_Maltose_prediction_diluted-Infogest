@@ -16,7 +16,7 @@ def get_wavenumber_range(wavenumbers_list, wavenumber_start = 3998, wavenumber_e
 
     return wavenumber_for_analysis
 
-def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation):
+def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_variable = 'maltose_concentration'):
     
     """ Applies PLS for the given range of wavenumbers and different hyper parameters for Savgol filter
 
@@ -27,7 +27,7 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation):
         raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
     
     df = df[df['supernatant'] == sample_presentation]
-    y = df['maltose_concentration'].values
+    y = df[y_variable].values
     
     model_stats_list = []
     for wavenumber_region in wavenumber_regions:
@@ -44,10 +44,13 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation):
 
 if __name__ == '__main__':
 
+    y_variable = 'time'
+    data_file = "dil+infogest_mir_all_conc"
+
     drop_columns = ['Technical_rep']
 
     #Read CSV and Drop columns
-    df_old = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
+    df_old = pd.read_csv("data/{}.csv".format(data_file))
     df = df_old.drop(drop_columns,  axis= 1)
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
@@ -76,17 +79,17 @@ if __name__ == '__main__':
     # sg_parameters = [(1,9)]
     
     #Get descriptive stats of Y
-    y = df_turbid['maltose_concentration'].values
-    descriptive_y = df_turbid['maltose_concentration'].describe().to_frame().T
+    y = df_turbid[y_variable].values
+    descriptive_y = df_turbid[y_variable].describe().to_frame().T
     descriptive_y['Coe_variation'] = descriptive_y['std']/descriptive_y['mean']
 
-    model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid")
-    model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant")
+    model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable)
+    model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable)
 
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =['Wavenumber_region', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components","Score_c", "RMSEC", "Score_CV", "RMSECV"])
 
-    with pd.ExcelWriter('output_dil+infogest_mir_maltose_noPr.xlsx') as writer:
+    with pd.ExcelWriter('output/{}'.format('out_' + data_file + '_' + y_variable + ".xlsx" )) as writer:
         descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')
