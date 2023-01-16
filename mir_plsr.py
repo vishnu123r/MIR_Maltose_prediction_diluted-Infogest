@@ -1,4 +1,4 @@
-from functions import conduct_pls, plot_q_t_plot
+from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df
 from optimize_mir import get_wavenumber_range
 
 import numpy as np
