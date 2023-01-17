@@ -49,6 +49,6 @@ starch_exp_list = [list(x) for x in set(tuple(x) for x in starch_exp_list)]
 #a list with the permutation of the two lists starch_exp_list and wavenumber_regions
 permutations = [(starch_exp, wavenumber_region) for starch_exp in starch_exp_list for wavenumber_region in wavenumber_regions]
 
-for item in permutations:
-    print(item[0][0])
-
+#get number of data points df_cal
+n = df_cal.shape[0]
+print(n)

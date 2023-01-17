@@ -85,7 +85,7 @@ def optimise_pls_cv(X, y, n_comp, plot_components=True):
 
     for i in component:
 
-        pls = PLSRegression(n_components=i)
+        pls = PLSRegression(n_components=i, scale = False)
  
         # Cross-validation
         loocv = LeaveOneOut()
@@ -122,7 +122,7 @@ def optimise_pls_cv(X, y, n_comp, plot_components=True):
 def conduct_pls(components, X, y):
     """Conducts PLS and returns values"""
     # Define PLS object with optimal number of components
-    pls_opt = PLSRegression(n_components= components)
+    pls_opt = PLSRegression(n_components= components, scale = False)
  
     # For to the entire dataset
     pls_opt.fit(X, y)
@@ -158,7 +158,7 @@ def plot_q_t_plot(X, y, ncomp):
 
     #### To get Q^2 vs T^2 plot
     # Define PLS object
-    pls = PLSRegression(n_components=ncomp)
+    pls = PLSRegression(n_components=ncomp, scale = False)
     # Fit data
     pls.fit(X, y)
  
@@ -225,21 +225,25 @@ if __name__ == '__main__':
     #Selecting Wavenumbers and assign x and Y values
     wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
     X = df_SN[wavenumbers_3998_800].values
-    X = savgol_filter(X, 31, 2, 2)
+    #X = savgol_filter(X, 51, 2, 2)
     y = df_SN['maltose_concentration'].values
     
+    print(X.shape)
+    X = apply_sgfilter(X, wavenumbers_3998_800, window_length = 41, poly_order = 2, deriv = 2, is_plot = True)
 
     ### LOdings Plot
-    y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
+    # y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
+    # factor1_load = x_load[:,0]
+
+    pls = PLSRegression(n_components=2, scale=False)
+    pls.fit(X, y)
+    x_load = pls.x_loadings_
     factor1_load = x_load[:,0]
 
-
-    #apply_sgfilter(X, wavenumbers_3998_800, window_length = 41, poly_order = 2, deriv = 2, is_plot = True)
-    
     fig, ax = plt.subplots()
     ax.plot(wavenumbers_3998_800, factor1_load)
     wavenumbers_3998_800 = list(map(int,wavenumbers_3998_800))
-    #ax.set_xlim(wavenumbers_3998_800[0] , wavenumbers_3998_800[-1])
+    ax.set_xlim(wavenumbers_3998_800[0] , wavenumbers_3998_800[-1])
     ax.set_xlabel('Wavenumber (cm-1)')
     ax.set_ylabel('D2 Absorbance')
     ax.ticklabel_format(style='sci', axis = 'y')

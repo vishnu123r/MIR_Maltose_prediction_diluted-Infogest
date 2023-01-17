@@ -1,4 +1,4 @@
-from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df
+from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df, apply_sgfilter  
 from optimize_mir import get_wavenumber_range
 
 import numpy as np
@@ -14,24 +14,23 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from math import sqrt
 
 ############# ----INPUTS---- ##############
-cal_file_location = "data/infogest_mir_noPrRice_conc.csv"
-val_file_location = "data/infogest_validation_mir.csv"
+cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
+val_file_location = "data/dil+infogest_validation_mir.csv"
+
+y_variable = "maltose_concentration"
 
 start_WN = 3998
 end_WN = 800
 
-sg_smoothing_point = 31
+sg_smoothing_point = 3
 sg_derivative = 1
 sg_polynomial = 2
 
-no_of_components = 5
+no_of_components = 4
 
 sample_presentation = "Supernatant"
-#sample_presentation = "Turbid"
+sample_presentation = "Turbid"
 #################
-
-
-
 
 df_cal = pd.read_csv(cal_file_location)
 df_val = pd.read_csv(val_file_location)
@@ -39,21 +38,24 @@ df_val = pd.read_csv(val_file_location)
 df_cal= format_df(df_cal)
 df_val= format_df(df_val)
 
-
 #Selecting Wavenumbers and assign x and Y values
 wavenumbers = list(df_cal.columns[7:])
 wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
 #X,y arrays - Calibration
-X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers_3998_800)
-X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers_3998_800, y_variable = y_variable)
+X_cal = apply_sgfilter(X_cal, wavenumbers_3998_800, sg_smoothing_point, sg_polynomial, sg_derivative)
+print(X_cal.shape[0])
+#X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 #X.y Arrays - External Validation
-X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers_3998_800)
-X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers_3998_800, y_variable = y_variable)
+X_val = apply_sgfilter(X_val, wavenumbers_3998_800, sg_smoothing_point, sg_polynomial, sg_derivative)
+#X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+
 
 #Apply PLSR
-plsr = PLSRegression(n_components=no_of_components)
+plsr = PLSRegression(n_components=no_of_components, scale = False)
 plsr.fit(X_cal, y_cal)
 y_c = np.ravel(plsr.predict(X_cal))
 
@@ -75,10 +77,11 @@ rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
 rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
 
 # Calculate MAE for calibration, cross-validation, and external-validation
-err = (y_ev-y_val)*100/y_val
-df_err = pd.DataFrame({'A': y_val, 'B': err})
-print(df_err)
-
+mae_c = mean_absolute_error(y_cal, y_c)
+mae_cv = mean_absolute_error(y_cal, y_cv)
+mae_ev = mean_absolute_error(y_val, y_ev)
+# err = (y_ev-y_val)*100/y_val
+# df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
 
 #Print stats
 print('R2 calib: %5.3f'  % score_c)
@@ -87,6 +90,10 @@ print('R2 EV: %5.3f'  % score_ev)
 print('RMSE calib: %5.3f' % rmse_c)
 print('RMSE CV: %5.3f' % rmse_cv)
 print('RMSE EV: %5.3f' % rmse_ev)
+print('MAE calib: %5.3f' % mae_c)
+print('MAE CV: %5.3f' % mae_cv)
+print('MAE EV: %5.3f' % mae_ev)
+
 
 #y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(ncomp, X_cal_sn, y_cal_sn)
 
