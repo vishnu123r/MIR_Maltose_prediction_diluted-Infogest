@@ -119,7 +119,7 @@ if __name__ == '__main__':
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =excel_columns)
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =excel_columns)
 
-    with pd.ExcelWriter('output/{}'.format('out_' + data_file + '_' + y_variable + '_mean_center' + str(group)+".xlsx" )) as writer:
+    with pd.ExcelWriter('output/{}'.format('out_' + data_file + '_' + y_variable + str(group)+".xlsx" )) as writer:
         descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')

@@ -15,7 +15,7 @@ from math import sqrt
 
 ############# ----INPUTS---- ##############
 cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
-val_file_location = "data/dil+infogest_validation_mir.csv"
+val_file_location = "data/infogest_validation_mir.csv"
 
 y_variable = "maltose_concentration"
 
@@ -29,7 +29,7 @@ sg_polynomial = 2
 no_of_components = 4
 
 sample_presentation = "Supernatant"
-sample_presentation = "Turbid"
+#sample_presentation = "Turbid"
 #################
 
 df_cal = pd.read_csv(cal_file_location)
@@ -83,16 +83,39 @@ mae_ev = mean_absolute_error(y_val, y_ev)
 # err = (y_ev-y_val)*100/y_val
 # df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
 
+#calculate standard error of the estimate
+se_c = np.std(y_cal)
+se_cv = np.std(y_cal)
+se_ev = np.std(y_val)
+
+#RPD values
+rpd_c = se_c/rmse_c
+rpd_cv = se_cv/rmse_cv
+rpd_ev = se_ev/rmse_ev
+
+
 #Print stats
 print('R2 calib: %5.3f'  % score_c)
 print('R2 CV: %5.3f'  % score_cv)
 print('R2 EV: %5.3f'  % score_ev)
+print("\n")
+
 print('RMSE calib: %5.3f' % rmse_c)
 print('RMSE CV: %5.3f' % rmse_cv)
 print('RMSE EV: %5.3f' % rmse_ev)
+print("\n")
+
 print('MAE calib: %5.3f' % mae_c)
 print('MAE CV: %5.3f' % mae_cv)
 print('MAE EV: %5.3f' % mae_ev)
+print("\n")
+
+print('RPD calib: %5.3f' % rpd_c)
+print('RPD CV: %5.3f' % rpd_cv)
+print('RPD EV: %5.3f' % rpd_ev)
+print("\n")
+
+
 
 
 #y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(ncomp, X_cal_sn, y_cal_sn)

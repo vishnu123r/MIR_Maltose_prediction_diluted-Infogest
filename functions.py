@@ -227,24 +227,34 @@ if __name__ == '__main__':
     X = df_SN[wavenumbers_3998_800].values
     #X = savgol_filter(X, 51, 2, 2)
     y = df_SN['maltose_concentration'].values
-    
-    print(X.shape)
-    X = apply_sgfilter(X, wavenumbers_3998_800, window_length = 41, poly_order = 2, deriv = 2, is_plot = True)
 
     ### LOdings Plot
     # y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
     # factor1_load = x_load[:,0]
 
-    pls = PLSRegression(n_components=2, scale=False)
+    pls = PLSRegression(n_components=5, scale=False)
     pls.fit(X, y)
     x_load = pls.x_loadings_
     factor1_load = x_load[:,0]
 
     fig, ax = plt.subplots()
-    ax.plot(wavenumbers_3998_800, factor1_load)
     wavenumbers_3998_800 = list(map(int,wavenumbers_3998_800))
-    ax.set_xlim(wavenumbers_3998_800[0] , wavenumbers_3998_800[-1])
+    ax.plot(wavenumbers_3998_800, factor1_load)
+    
+    print(wavenumbers_3998_800)
+
     ax.set_xlabel('Wavenumber (cm-1)')
     ax.set_ylabel('D2 Absorbance')
+
+    ax.set_title('Loadings Plot')
+    
+
     ax.ticklabel_format(style='sci', axis = 'y')
+    ax.set_xticks(wavenumbers_3998_800[::100])
+    ax.set_xticklabels(wavenumbers_3998_800[::100])
+    ax.invert_xaxis()
+    ax.set_xlim(3998, 800)
+
+    plt.axhline(0, color='black', linewidth = 0.5)
+
     plt.show()
