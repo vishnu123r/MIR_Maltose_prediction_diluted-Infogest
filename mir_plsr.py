@@ -13,30 +13,44 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 from math import sqrt
 
+import os
+
 ############# ----INPUTS---- ##############
 cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
-y_variable = "maltose_concentration"
+exp_type = "dil"
+starch = "Rice"
+y_variable = "time"
 
-start_WN = 3998
-end_WN = 800
+start_WN = 1249
+end_WN = 909
 
-sg_smoothing_point = 3
+sg_smoothing_point = 11
 sg_derivative = 1
 sg_polynomial = 2
 
-no_of_components = 4
+no_of_components = 15
+#sample_presentation = "Supernatant"
+sample_presentation = "Turbid"
 
-sample_presentation = "Supernatant"
-#sample_presentation = "Turbid"
+
+tick_distance = 10
+
+txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n" + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: " + sample_presentation + "\n"
+
 #################
-
 df_cal = pd.read_csv(cal_file_location)
 df_val = pd.read_csv(val_file_location)
 
 df_cal= format_df(df_cal)
 df_val= format_df(df_val)
+
+if starch != "All":
+    df_cal = df_cal[df_cal["starch"] == starch]
+
+if exp_type != "exp_type":
+    df_cal = df_cal[df_cal["exp_type"] == exp_type]
 
 #Selecting Wavenumbers and assign x and Y values
 wavenumbers = list(df_cal.columns[7:])
@@ -114,6 +128,50 @@ print('RPD calib: %5.3f' % rpd_c)
 print('RPD CV: %5.3f' % rpd_cv)
 print('RPD EV: %5.3f' % rpd_ev)
 print("\n")
+
+
+x_load = plsr.x_loadings_
+
+def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_string, tick_distance):
+    
+    if y_variable not in ["maltose_concentration", "time"]:
+        raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
+
+    for comp in range(x_load.shape[1]):
+
+        factor_load = x_load[:,comp]
+
+        fig, ax = plt.subplots()
+        wavenumbers = list(map(int,wavenumbers))
+        ax.plot(wavenumbers, factor_load)
+
+        ax.set_xlabel('Wavenumber (cm-1)')
+        ax.set_ylabel('D2 Absorbance')
+
+        ax.set_title('Loading - {}'.format(comp+1), fontsize = 5)
+
+        ax.tick_params(axis='both', which='major', labelsize=5)
+        ax.set_xticks(wavenumbers[::tick_distance])
+        ax.set_xticklabels(wavenumbers[::tick_distance])
+        ax.invert_xaxis()
+        ax.set_xlim(wavenumbers[0], wavenumbers[-1])
+
+        plt.axhline(0, color='black', linewidth = 0.5)
+
+        path = "output/{0}/images/{1}/loadings/{2}/{3}-{4}".format(y_variable, exp_type, starch, wavenumbers[0], wavenumbers[-1])
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_name = "/Load_{0}_{1}_{2}_{3}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1])
+
+        plt.savefig(path+file_name, dpi = 1000)
+
+    with open(path + '/parameters.txt', 'w') as f:
+        f.write(txt_string)
+
+
+create_loadings_plot(starch = starch, exp_type = exp_type, y_variable = y_variable, wavenumbers = wavenumbers_3998_800, x_load = x_load, txt_string=txt_string, tick_distance = tick_distance)
+
+
 
 
 

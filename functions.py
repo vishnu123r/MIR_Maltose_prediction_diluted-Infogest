@@ -142,6 +142,10 @@ def conduct_pls(components, X, y):
     # Calculate mean squared error for calibration and cross validation
     rmse_c = sqrt(mean_squared_error(y, y_c))
     rmse_cv = sqrt(mean_squared_error(y, y_cv))
+
+    # calculate RPD values
+    rpd_c = np.std(y)/rmse_c
+    rpd_cv = np.std(y)/rmse_cv
     
     print('No of components: {}'.format(components))
     print('R2 calib: %5.3f'  % score_c)
@@ -149,7 +153,7 @@ def conduct_pls(components, X, y):
     print('RMSE calib: %5.3f' % rmse_c)
     print('RMSE CV: %5.3f' % rmse_cv)
     
-    return (y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load)
+    return (rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load)
 
 def loadings_plot():
     pass
@@ -229,7 +233,7 @@ if __name__ == '__main__':
     y = df_SN['maltose_concentration'].values
 
     ### LOdings Plot
-    # y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
+    # rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
     # factor1_load = x_load[:,0]
 
     pls = PLSRegression(n_components=5, scale=False)
@@ -241,7 +245,6 @@ if __name__ == '__main__':
     wavenumbers_3998_800 = list(map(int,wavenumbers_3998_800))
     ax.plot(wavenumbers_3998_800, factor1_load)
     
-    print(wavenumbers_3998_800)
 
     ax.set_xlabel('Wavenumber (cm-1)')
     ax.set_ylabel('D2 Absorbance')
