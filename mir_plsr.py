@@ -169,9 +169,7 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
                 ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.01), size =5)
 
         ax.set_xlabel('Wavenumber (cm-1)')
-        ax.set_ylabel('D2 Absorbance')
-
-        ax.set_title('Loading - {}'.format(comp+1), fontsize = 5)
+        ax.set_ylabel('Loadings (Factor {})'.format(comp+1))
 
         ax.tick_params(axis='both', which='major', labelsize=5)
         ax.set_xticks(wavenumbers[::tick_distance])
