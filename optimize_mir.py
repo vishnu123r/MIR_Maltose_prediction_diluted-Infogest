@@ -74,9 +74,9 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
 if __name__ == '__main__':
 
     ##### INPUTS ##########
-    y_variable = 'maltose_concentration'
-    data_file = "dil+infogest_mir_all_conc"
-    group = True
+    y_variable = 'time'
+    data_file = "dil+infogest_mir_noPr_conc"
+    group = False
 
     ###########################
     drop_columns = ['Technical_rep']

@@ -4,7 +4,7 @@ from optimize_mir import get_wavenumber_range
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, find_peaks
 
 from sklearn.cross_decomposition import PLSRegression
 from scipy.stats import f
@@ -20,22 +20,22 @@ cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
 exp_type = "dil"
-starch = "Rice"
+starch = "Gelose 80"
 y_variable = "time"
 
-start_WN = 1249
-end_WN = 909
+start_WN = 1499
+end_WN = 800
 
-sg_smoothing_point = 11
+sg_smoothing_point = 21
 sg_derivative = 1
 sg_polynomial = 2
 
-no_of_components = 15
+no_of_components = 7
 #sample_presentation = "Supernatant"
 sample_presentation = "Turbid"
 
 
-tick_distance = 10
+tick_distance = 40
 
 txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n" + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: " + sample_presentation + "\n"
 
@@ -49,22 +49,21 @@ df_val= format_df(df_val)
 if starch != "All":
     df_cal = df_cal[df_cal["starch"] == starch]
 
-if exp_type != "exp_type":
+if exp_type != "All":
     df_cal = df_cal[df_cal["exp_type"] == exp_type]
 
 #Selecting Wavenumbers and assign x and Y values
 wavenumbers = list(df_cal.columns[7:])
-wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
 #X,y arrays - Calibration
-X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers_3998_800, y_variable = y_variable)
-X_cal = apply_sgfilter(X_cal, wavenumbers_3998_800, sg_smoothing_point, sg_polynomial, sg_derivative)
-print(X_cal.shape[0])
+X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
+X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
 #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 #X.y Arrays - External Validation
-X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers_3998_800, y_variable = y_variable)
-X_val = apply_sgfilter(X_val, wavenumbers_3998_800, sg_smoothing_point, sg_polynomial, sg_derivative)
+X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
+X_val = apply_sgfilter(X_val, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
 #X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 
@@ -108,31 +107,40 @@ rpd_cv = se_cv/rmse_cv
 rpd_ev = se_ev/rmse_ev
 
 
-#Print stats
-print('R2 calib: %5.3f'  % score_c)
-print('R2 CV: %5.3f'  % score_cv)
-print('R2 EV: %5.3f'  % score_ev)
-print("\n")
+# #Print stats
+# print('R2 calib: %5.3f'  % score_c)
+# print('R2 CV: %5.3f'  % score_cv)
+# print('R2 EV: %5.3f'  % score_ev)
+# print("\n")
 
-print('RMSE calib: %5.3f' % rmse_c)
-print('RMSE CV: %5.3f' % rmse_cv)
-print('RMSE EV: %5.3f' % rmse_ev)
-print("\n")
+# print('RMSE calib: %5.3f' % rmse_c)
+# print('RMSE CV: %5.3f' % rmse_cv)
+# print('RMSE EV: %5.3f' % rmse_ev)
+# print("\n")
 
-print('MAE calib: %5.3f' % mae_c)
-print('MAE CV: %5.3f' % mae_cv)
-print('MAE EV: %5.3f' % mae_ev)
-print("\n")
+# print('MAE calib: %5.3f' % mae_c)
+# print('MAE CV: %5.3f' % mae_cv)
+# print('MAE EV: %5.3f' % mae_ev)
+# print("\n")
 
-print('RPD calib: %5.3f' % rpd_c)
-print('RPD CV: %5.3f' % rpd_cv)
-print('RPD EV: %5.3f' % rpd_ev)
-print("\n")
+# print('RPD calib: %5.3f' % rpd_c)
+# print('RPD CV: %5.3f' % rpd_cv)
+# print('RPD EV: %5.3f' % rpd_ev)
+# print("\n")
 
 
 x_load = plsr.x_loadings_
 
-def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_string, tick_distance):
+def get_peaks(loadings, height):
+    positive_peaks,_ = find_peaks(loadings, height = height)
+    negative_peaks,_ = find_peaks(-loadings, height = height)
+    peaks = np.concatenate((positive_peaks, negative_peaks))
+
+    return peaks
+
+
+
+def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True):
     
     if y_variable not in ["maltose_concentration", "time"]:
         raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
@@ -144,6 +152,13 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
         fig, ax = plt.subplots()
         wavenumbers = list(map(int,wavenumbers))
         ax.plot(wavenumbers, factor_load)
+
+        #assigning the peaks
+        if peaks_on:
+            peaks = get_peaks(factor_load, height = 0.05)
+            for peak in peaks:
+                ax.plot(wavenumbers[peak], factor_load[peak], "o", color = "red")
+                ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.01), size =5)
 
         ax.set_xlabel('Wavenumber (cm-1)')
         ax.set_ylabel('D2 Absorbance')
@@ -158,18 +173,20 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
 
         plt.axhline(0, color='black', linewidth = 0.5)
 
-        path = "output/{0}/images/{1}/loadings/{2}/{3}-{4}".format(y_variable, exp_type, starch, wavenumbers[0], wavenumbers[-1])
+        path = "output/{0}/images/{1}/loadings/{2}/{3}-{4}/{5}sg{6}".format(y_variable, exp_type, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
         if not os.path.exists(path):
             os.makedirs(path)
-        file_name = "/Load_{0}_{1}_{2}_{3}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1])
-
+        file_name = "/Load_{0}_{1}_{2}_{3}_{4}sg{5}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
+        
         plt.savefig(path+file_name, dpi = 1000)
 
     with open(path + '/parameters.txt', 'w') as f:
         f.write(txt_string)
 
 
-create_loadings_plot(starch = starch, exp_type = exp_type, y_variable = y_variable, wavenumbers = wavenumbers_3998_800, x_load = x_load, txt_string=txt_string, tick_distance = tick_distance)
+create_loadings_plot(starch = starch, exp_type = exp_type, y_variable = y_variable, 
+wavenumbers = wavenumbers, x_load = x_load, txt_string=txt_string, tick_distance = tick_distance, 
+sg_derivative=sg_derivative, sg_smoothing_point=sg_smoothing_point)
 
 
 
