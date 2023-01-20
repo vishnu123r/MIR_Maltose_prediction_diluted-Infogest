@@ -20,22 +20,22 @@ cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
 exp_type = "dil"
-starch = "Gelose 80"
+starch = "All"
 y_variable = "time"
 
 start_WN = 1499
 end_WN = 800
 
 sg_smoothing_point = 21
-sg_derivative = 1
+sg_derivative = 2
 sg_polynomial = 2
 
-no_of_components = 7
+no_of_components = 4
 #sample_presentation = "Supernatant"
 sample_presentation = "Turbid"
 
 
-tick_distance = 40
+tick_distance = 80
 
 txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n" + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: " + sample_presentation + "\n"
 
@@ -138,12 +138,20 @@ def get_peaks(loadings, height):
 
     return peaks
 
+path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
+if not os.path.exists(path):
+    os.makedirs(path)
+else: 
+    filelist = [f for f in os.listdir(path)]
+    for f in filelist:
+        os.remove(os.path.join(path, f))
 
 
 def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True):
     
     if y_variable not in ["maltose_concentration", "time"]:
         raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
+
 
     for comp in range(x_load.shape[1]):
 
@@ -155,7 +163,7 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
 
         #assigning the peaks
         if peaks_on:
-            peaks = get_peaks(factor_load, height = 0.05)
+            peaks = get_peaks(factor_load, height = 0.1)
             for peak in peaks:
                 ax.plot(wavenumbers[peak], factor_load[peak], "o", color = "red")
                 ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.01), size =5)
@@ -172,10 +180,6 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
         ax.set_xlim(wavenumbers[0], wavenumbers[-1])
 
         plt.axhline(0, color='black', linewidth = 0.5)
-
-        path = "output/{0}/images/{1}/loadings/{2}/{3}-{4}/{5}sg{6}".format(y_variable, exp_type, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
-        if not os.path.exists(path):
-            os.makedirs(path)
         file_name = "/Load_{0}_{1}_{2}_{3}_{4}sg{5}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
         
         plt.savefig(path+file_name, dpi = 1000)
