@@ -1,4 +1,4 @@
-from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df, apply_sgfilter  
+from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df, apply_sgfilter 
 from optimize_mir import get_wavenumber_range
 
 import numpy as np
@@ -20,8 +20,8 @@ cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
 exp_type = "dil"
-starch = "All"
-y_variable = "time"
+starch = "Pregelled Maize Starch"
+y_variable = "maltose_concentration"
 
 start_WN = 1499
 end_WN = 800
@@ -36,8 +36,9 @@ sample_presentation = "Turbid"
 
 
 tick_distance = 80
+loadings_height = 0.1
 
-txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n" + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: " + sample_presentation + "\n"
+txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n"  + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: "  + sample_presentation + "\n" + " tick_distance: " + str(tick_distance) + "\n" + " loadings_height: " + str(loadings_height) + "\n"
 
 #################
 df_cal = pd.read_csv(cal_file_location)
@@ -46,65 +47,65 @@ df_val = pd.read_csv(val_file_location)
 df_cal= format_df(df_cal)
 df_val= format_df(df_val)
 
-if starch != "All":
-    df_cal = df_cal[df_cal["starch"] == starch]
+# if starch != "All":
+#     df_cal = df_cal[df_cal["starch"] == starch]
 
-if exp_type != "All":
-    df_cal = df_cal[df_cal["exp_type"] == exp_type]
+# if exp_type != "All":
+#     df_cal = df_cal[df_cal["exp_type"] == exp_type]
 
-#Selecting Wavenumbers and assign x and Y values
-wavenumbers = list(df_cal.columns[7:])
-wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+# #Selecting Wavenumbers and assign x and Y values
+# wavenumbers = list(df_cal.columns[7:])
+# wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
-#X,y arrays - Calibration
-X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
-X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
-#X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+# #X,y arrays - Calibration
+# X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
+# X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
+# #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
-#X.y Arrays - External Validation
-X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
-X_val = apply_sgfilter(X_val, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
-#X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+# #X.y Arrays - External Validation
+# X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
+# X_val = apply_sgfilter(X_val, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
+# #X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 
-#Apply PLSR
-plsr = PLSRegression(n_components=no_of_components, scale = False)
-plsr.fit(X_cal, y_cal)
-y_c = np.ravel(plsr.predict(X_cal))
+# #Apply PLSR
+# plsr = PLSRegression(n_components=no_of_components, scale = False)
+# plsr.fit(X_cal, y_cal)
+# y_c = np.ravel(plsr.predict(X_cal))
 
-# Cross-validation
-loocv = LeaveOneOut()
-y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
+# # Cross-validation
+# loocv = LeaveOneOut()
+# y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
 
-#External Validation
-y_ev = np.ravel(plsr.predict(X_val))
+# #External Validation
+# y_ev = np.ravel(plsr.predict(X_val))
 
-# Calculate scores for calibration, cross-validation, and external-validation
-score_c = r2_score(y_cal, y_c)
-score_cv = r2_score(y_cal, y_cv)
-score_ev = r2_score(y_val, y_ev)
+# # Calculate scores for calibration, cross-validation, and external-validation
+# score_c = r2_score(y_cal, y_c)
+# score_cv = r2_score(y_cal, y_cv)
+# score_ev = r2_score(y_val, y_ev)
 
-# Calculate RMSE for calibration, cross-validation, and external-validation
-rmse_c = sqrt(mean_squared_error(y_cal, y_c))
-rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
-rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
+# # Calculate RMSE for calibration, cross-validation, and external-validation
+# rmse_c = sqrt(mean_squared_error(y_cal, y_c))
+# rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
+# rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
 
-# Calculate MAE for calibration, cross-validation, and external-validation
-mae_c = mean_absolute_error(y_cal, y_c)
-mae_cv = mean_absolute_error(y_cal, y_cv)
-mae_ev = mean_absolute_error(y_val, y_ev)
-# err = (y_ev-y_val)*100/y_val
-# df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
+# # Calculate MAE for calibration, cross-validation, and external-validation
+# mae_c = mean_absolute_error(y_cal, y_c)
+# mae_cv = mean_absolute_error(y_cal, y_cv)
+# mae_ev = mean_absolute_error(y_val, y_ev)
+# # err = (y_ev-y_val)*100/y_val
+# # df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
 
-#calculate standard error of the estimate
-se_c = np.std(y_cal)
-se_cv = np.std(y_cal)
-se_ev = np.std(y_val)
+# #calculate standard error of the estimate
+# se_c = np.std(y_cal)
+# se_cv = np.std(y_cal)
+# se_ev = np.std(y_val)
 
-#RPD values
-rpd_c = se_c/rmse_c
-rpd_cv = se_cv/rmse_cv
-rpd_ev = se_ev/rmse_ev
+# #RPD values
+# rpd_c = se_c/rmse_c
+# rpd_cv = se_cv/rmse_cv
+# rpd_ev = se_ev/rmse_ev
 
 
 # #Print stats
@@ -129,7 +130,44 @@ rpd_ev = se_ev/rmse_ev
 # print("\n")
 
 
-x_load = plsr.x_loadings_
+fig, ax = plt.subplots()
+
+for starch in ["Rice", "Gelose 50", "Gelose 80", "Potato", "Pregelled Maize Starch"]:
+
+    if starch != "All":
+        df_cal_new = df_cal[df_cal["starch"] == starch]
+
+    else:
+        df_cal_new = df_cal
+
+    if exp_type != "All":
+        df_cal_new = df_cal_new[df_cal_new["exp_type"] == exp_type]
+
+    #Selecting Wavenumbers and assign x and Y values
+    wavenumbers = list(df_cal_new.columns[7:])
+    wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+    
+    #X,y arrays - Calibration
+    X_cal,y_cal = convert_to_arrays(df_cal_new, sample_presentation, wavenumbers, y_variable = y_variable)
+    X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
+    #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+
+    rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(components = no_of_components, X = X_cal, y = y_cal)
+    wavenumbers = list(map(int,wavenumbers))
+    #plot loadings
+    factor_load = x_load[:,0]
+    ax.plot(wavenumbers, factor_load)
+
+ax.legend(["Rice", "Gelose 50", "Gelose 80", "Potato", "Pregelled Maize Starch"])
+ax.set_xlabel('Wavenumber')
+ax.set_ylabel('Loadings')
+ax.set_title('Loadings for factor 1')
+ax.grid(True)
+    
+    
+plt.show()
+
+quit()
 
 def get_peaks(loadings, height):
     positive_peaks,_ = find_peaks(loadings, height = height)
@@ -137,6 +175,8 @@ def get_peaks(loadings, height):
     peaks = np.concatenate((positive_peaks, negative_peaks))
 
     return peaks
+
+
 
 path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
 if not os.path.exists(path):
@@ -147,7 +187,7 @@ else:
         os.remove(os.path.join(path, f))
 
 
-def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True):
+def create_loadings_plot(starch, y_variable, wavenumbers, x_load, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True, height = loadings_height):
     
     if y_variable not in ["maltose_concentration", "time"]:
         raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
@@ -163,13 +203,15 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
 
         #assigning the peaks
         if peaks_on:
-            peaks = get_peaks(factor_load, height = 0.1)
+            peaks = get_peaks(factor_load, height = height)
             for peak in peaks:
                 ax.plot(wavenumbers[peak], factor_load[peak], "o", color = "red")
                 ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.01), size =5)
 
         ax.set_xlabel('Wavenumber (cm-1)')
         ax.set_ylabel('Loadings (Factor {})'.format(comp+1))
+
+        ax.set_title("{}-{}".format(starch, y_variable))
 
         ax.tick_params(axis='both', which='major', labelsize=5)
         ax.set_xticks(wavenumbers[::tick_distance])
@@ -186,7 +228,7 @@ def create_loadings_plot(starch, exp_type, y_variable, wavenumbers, x_load, txt_
         f.write(txt_string)
 
 
-create_loadings_plot(starch = starch, exp_type = exp_type, y_variable = y_variable, 
+create_loadings_plot(starch = starch, y_variable = y_variable, 
 wavenumbers = wavenumbers, x_load = x_load, txt_string=txt_string, tick_distance = tick_distance, 
 sg_derivative=sg_derivative, sg_smoothing_point=sg_smoothing_point)
 
