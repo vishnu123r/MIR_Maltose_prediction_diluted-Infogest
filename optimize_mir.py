@@ -1,6 +1,7 @@
 from functions import apply_sgfilter, optimise_pls_cv, conduct_pls, convert_to_arrays
 import numpy as np
 import pandas as pd
+import kennard_stone as ks
 
 """
 This script goes through different wavenumber regions and savitsky-golay hypreparameters and finds the optimum values
@@ -46,27 +47,31 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
             df_subset = df[(df['starch'] == starch) & (df['exp_type'] == exp_type)]
             no_samples = df_subset.shape[0]
             X,y = convert_to_arrays(df_subset, sample_presentation, wavenumber_region, y_variable)
+            X_cal, X_val, y_cal, y_val = ks.train_test_split(X, y, test_size=0.2, random_state=42)
 
             for deriv, window in sg_parameters:
-                X_sg = apply_sgfilter(X, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
-                optimum_components = optimise_pls_cv(X_sg, y, n_comp = 15, plot_components=False)
-                rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(optimum_components, X_sg, y)
-                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, score_c, rmse_c, score_cv, rmse_cv)
+                X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
+                rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
                 model_stats_list.append(variable_names)
 
     else:
         for wavenumber_region in wavenumber_regions:
             no_samples = df.shape[0]
             X = df[wavenumber_region].values
+            X_cal, X_val, y_cal, y_val = ks.train_test_split(X, y, test_size=0.2, random_state=42)
             wavenumber_string = "{0}-{1} cm-1".format(wavenumber_region[0], wavenumber_region[-1])
             starch = "All"
             exp_type = "All"
-            print("Currently doing wavenumber region - {}".format(wavenumber_string))
+            print("Currently doing wavenumber region - {0} sample presentation - {1}".format(wavenumber_string, sample_presentation))
             for deriv, window in sg_parameters:
-                X_sg = apply_sgfilter(X, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
-                optimum_components = optimise_pls_cv(X_sg, y, n_comp = 15, plot_components=False)
-                rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(optimum_components, X_sg, y)
-                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, score_c, rmse_c, score_cv, rmse_cv)
+                X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
+                rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
                 model_stats_list.append(variable_names)
 
     return model_stats_list
@@ -74,9 +79,9 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
 if __name__ == '__main__':
 
     ##### INPUTS ##########
-    y_variable = 'time'
+    y_variable = 'starch_digestibility'
     data_file = "dil+infogest_mir_noPr_conc"
-    group = False
+    group = True
 
     ###########################
     drop_columns = ['Technical_rep']
@@ -87,7 +92,7 @@ if __name__ == '__main__':
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[7:])
+    wavenumbers_old = list(df.columns[8:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
@@ -117,11 +122,11 @@ if __name__ == '__main__':
     model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable, group=group)
     model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable, group=group)
 
-    excel_columns = ['Wavenumber_region', 'Starch', 'Exp_type', 'no_samples', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components", 'rpd_c', 'rpd_cv', 'Score_c', 'RMSEC', 'Score_CV', 'RMSECV']
+    excel_columns = ['Wavenumber_region', 'Starch', 'Exp_type', 'no_samples', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components", 'rpd_c', 'rpd_cv', 'rpd_ev','Score_c', 'RMSEC', 'Score_CV', 'RMSECV', 'Score_EV', 'RMSE_EV']
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =excel_columns)
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =excel_columns)
 
-    with pd.ExcelWriter('output/{0}/{1}'.format(y_variable, 'out_' + data_file + '_' + y_variable + '_' + str(group)+".xlsx" )) as writer:
+    with pd.ExcelWriter('output/{0}/{1}'.format(y_variable, 'outks_' + data_file + '_' + y_variable + '_' + str(group)+".xlsx" )) as writer:
     #with pd.ExcelWriter("output/test.xlsx" ) as writer:
         descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')

@@ -11,6 +11,8 @@ from scipy.stats import f
 from sklearn.model_selection import cross_val_predict, LeaveOneOut, cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
+from kennard_stone import train_test_split
+
 from math import sqrt
 
 import os
@@ -19,20 +21,20 @@ import os
 cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
-exp_type = "dil"
-starch = "Pregelled Maize Starch"
+exp_type = "All"
+starch = "All"
 y_variable = "maltose_concentration"
 
-start_WN = 1499
+start_WN = 3998
 end_WN = 800
 
-sg_smoothing_point = 21
-sg_derivative = 2
+sg_smoothing_point = 31
+sg_derivative = 1
 sg_polynomial = 2
 
-no_of_components = 4
-#sample_presentation = "Supernatant"
-sample_presentation = "Turbid"
+no_of_components = 5
+sample_presentation = "Supernatant"
+#sample_presentation = "Turbid"
 
 
 tick_distance = 80
@@ -47,20 +49,22 @@ df_val = pd.read_csv(val_file_location)
 df_cal= format_df(df_cal)
 df_val= format_df(df_val)
 
-# if starch != "All":
-#     df_cal = df_cal[df_cal["starch"] == starch]
+if starch != "All":
+    df_cal = df_cal[df_cal["starch"] == starch]
 
-# if exp_type != "All":
-#     df_cal = df_cal[df_cal["exp_type"] == exp_type]
+if exp_type != "All":
+    df_cal = df_cal[df_cal["exp_type"] == exp_type]
 
-# #Selecting Wavenumbers and assign x and Y values
-# wavenumbers = list(df_cal.columns[7:])
-# wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+#Selecting Wavenumbers and assign x and Y values
+wavenumbers = list(df_cal.columns[8:])
+wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
-# #X,y arrays - Calibration
-# X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
-# X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
-# #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+#X,y arrays - Calibration
+X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
+X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
+#X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+
+X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state=42)
 
 # #X.y Arrays - External Validation
 # X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
@@ -68,106 +72,66 @@ df_val= format_df(df_val)
 # #X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
 
-# #Apply PLSR
-# plsr = PLSRegression(n_components=no_of_components, scale = False)
-# plsr.fit(X_cal, y_cal)
-# y_c = np.ravel(plsr.predict(X_cal))
+#Apply PLSR
+plsr = PLSRegression(n_components=no_of_components, scale = False)
+plsr.fit(X_cal, y_cal)
+y_c = np.ravel(plsr.predict(X_cal))
 
-# # Cross-validation
-# loocv = LeaveOneOut()
-# y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
+# Cross-validation
+loocv = LeaveOneOut()
+y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
 
-# #External Validation
-# y_ev = np.ravel(plsr.predict(X_val))
+#External Validation
+y_ev = np.ravel(plsr.predict(X_val))
 
-# # Calculate scores for calibration, cross-validation, and external-validation
-# score_c = r2_score(y_cal, y_c)
-# score_cv = r2_score(y_cal, y_cv)
-# score_ev = r2_score(y_val, y_ev)
+# Calculate scores for calibration, cross-validation, and external-validation
+score_c = r2_score(y_cal, y_c)
+score_cv = r2_score(y_cal, y_cv)
+score_ev = r2_score(y_val, y_ev)
 
-# # Calculate RMSE for calibration, cross-validation, and external-validation
-# rmse_c = sqrt(mean_squared_error(y_cal, y_c))
-# rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
-# rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
+# Calculate RMSE for calibration, cross-validation, and external-validation
+rmse_c = sqrt(mean_squared_error(y_cal, y_c))
+rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
+rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
 
-# # Calculate MAE for calibration, cross-validation, and external-validation
-# mae_c = mean_absolute_error(y_cal, y_c)
-# mae_cv = mean_absolute_error(y_cal, y_cv)
-# mae_ev = mean_absolute_error(y_val, y_ev)
-# # err = (y_ev-y_val)*100/y_val
-# # df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
+# Calculate MAE for calibration, cross-validation, and external-validation
+mae_c = mean_absolute_error(y_cal, y_c)
+mae_cv = mean_absolute_error(y_cal, y_cv)
+mae_ev = mean_absolute_error(y_val, y_ev)
+# err = (y_ev-y_val)*100/y_val
+# df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
 
-# #calculate standard error of the estimate
-# se_c = np.std(y_cal)
-# se_cv = np.std(y_cal)
-# se_ev = np.std(y_val)
+#calculate standard error of the estimate
+se_c = np.std(y_cal)
+se_cv = np.std(y_cal)
+se_ev = np.std(y_val)
 
-# #RPD values
-# rpd_c = se_c/rmse_c
-# rpd_cv = se_cv/rmse_cv
-# rpd_ev = se_ev/rmse_ev
-
-
-# #Print stats
-# print('R2 calib: %5.3f'  % score_c)
-# print('R2 CV: %5.3f'  % score_cv)
-# print('R2 EV: %5.3f'  % score_ev)
-# print("\n")
-
-# print('RMSE calib: %5.3f' % rmse_c)
-# print('RMSE CV: %5.3f' % rmse_cv)
-# print('RMSE EV: %5.3f' % rmse_ev)
-# print("\n")
-
-# print('MAE calib: %5.3f' % mae_c)
-# print('MAE CV: %5.3f' % mae_cv)
-# print('MAE EV: %5.3f' % mae_ev)
-# print("\n")
-
-# print('RPD calib: %5.3f' % rpd_c)
-# print('RPD CV: %5.3f' % rpd_cv)
-# print('RPD EV: %5.3f' % rpd_ev)
-# print("\n")
+#RPD values
+rpd_c = se_c/rmse_c
+rpd_cv = se_cv/rmse_cv
+rpd_ev = se_ev/rmse_ev
 
 
-fig, ax = plt.subplots()
+#Print stats
+print('R2 calib: %5.3f'  % score_c)
+print('R2 CV: %5.3f'  % score_cv)
+print('R2 EV: %5.3f'  % score_ev)
+print("\n")
 
-for starch in ["Rice", "Gelose 50", "Gelose 80", "Potato", "Pregelled Maize Starch"]:
+print('RMSE calib: %5.3f' % rmse_c)
+print('RMSE CV: %5.3f' % rmse_cv)
+print('RMSE EV: %5.3f' % rmse_ev)
+print("\n")
 
-    if starch != "All":
-        df_cal_new = df_cal[df_cal["starch"] == starch]
+print('MAE calib: %5.3f' % mae_c)
+print('MAE CV: %5.3f' % mae_cv)
+print('MAE EV: %5.3f' % mae_ev)
+print("\n")
 
-    else:
-        df_cal_new = df_cal
-
-    if exp_type != "All":
-        df_cal_new = df_cal_new[df_cal_new["exp_type"] == exp_type]
-
-    #Selecting Wavenumbers and assign x and Y values
-    wavenumbers = list(df_cal_new.columns[7:])
-    wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
-    
-    #X,y arrays - Calibration
-    X_cal,y_cal = convert_to_arrays(df_cal_new, sample_presentation, wavenumbers, y_variable = y_variable)
-    X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
-    #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
-
-    rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(components = no_of_components, X = X_cal, y = y_cal)
-    wavenumbers = list(map(int,wavenumbers))
-    #plot loadings
-    factor_load = x_load[:,0]
-    ax.plot(wavenumbers, factor_load)
-
-ax.legend(["Rice", "Gelose 50", "Gelose 80", "Potato", "Pregelled Maize Starch"])
-ax.set_xlabel('Wavenumber')
-ax.set_ylabel('Loadings')
-ax.set_title('Loadings for factor 1')
-ax.grid(True)
-    
-    
-plt.show()
-
-quit()
+print('RPD calib: %5.3f' % rpd_c)
+print('RPD CV: %5.3f' % rpd_cv)
+print('RPD EV: %5.3f' % rpd_ev)
+print("\n")
 
 def get_peaks(loadings, height):
     positive_peaks,_ = find_peaks(loadings, height = height)
@@ -176,7 +140,7 @@ def get_peaks(loadings, height):
 
     return peaks
 
-
+quit()
 
 path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
 if not os.path.exists(path):

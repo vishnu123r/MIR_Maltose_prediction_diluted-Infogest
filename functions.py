@@ -22,7 +22,7 @@ def format_df(df):
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[7:])
+    wavenumbers_old = list(df.columns[8:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
@@ -119,41 +119,45 @@ def optimise_pls_cv(X, y, n_comp, plot_components=True):
     
     return optimum_components
 
-def conduct_pls(components, X, y):
+def conduct_pls(components, X_cal, X_val, y_cal, y_val, val = False):
     """Conducts PLS and returns values"""
     # Define PLS object with optimal number of components
     pls_opt = PLSRegression(n_components= components, scale = False)
  
     # For to the entire dataset
-    pls_opt.fit(X, y)
-    y_c = pls_opt.predict(X)
+    pls_opt.fit(X_cal, y_cal)
+    y_c = pls_opt.predict(X_cal)
     
-    #Loadings
-    x_load = pls_opt.x_loadings_
- 
+    #Stats for calibration
+    score_c = r2_score(y_cal, y_c)
+    rmse_c = sqrt(mean_squared_error(y_cal, y_c))
+    rpd_c = np.std(y_cal)/rmse_c
+
     # Cross-validation
     loocv = LeaveOneOut()
-    y_cv = cross_val_predict(pls_opt, X, y, cv=loocv)
- 
-    # Calculate scores for calibration and cross-validation
-    score_c = r2_score(y, y_c)
-    score_cv = r2_score(y, y_cv)
- 
-    # Calculate mean squared error for calibration and cross validation
-    rmse_c = sqrt(mean_squared_error(y, y_c))
-    rmse_cv = sqrt(mean_squared_error(y, y_cv))
+    y_cv = cross_val_predict(pls_opt, X_cal, y_cal, cv=loocv)
+    
+    # Stats for cross validation
+    score_cv = r2_score(y_cal, y_cv)
+    rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
+    rpd_cv = np.std(y_cal)/rmse_cv
 
-    # calculate RPD values
-    rpd_c = np.std(y)/rmse_c
-    rpd_cv = np.std(y)/rmse_cv
+    if val:
+        # For external validation
+        y_v = pls_opt.predict(X_val)
+        score_v = r2_score(y_val, y_v)
+        rmse_v = sqrt(mean_squared_error(y_val, y_v))
+        rpd_v = np.std(y_val)/rmse_v
+
+        return (rpd_c, rpd_cv, rpd_v, score_c, score_cv, score_v, rmse_c, rmse_cv, rmse_v)
     
-    print('No of components: {}'.format(components))
-    print('R2 calib: %5.3f'  % score_c)
-    print('R2 CV: %5.3f'  % score_cv)
-    print('RMSE calib: %5.3f' % rmse_c)
-    print('RMSE CV: %5.3f' % rmse_cv)
-    
-    return (rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load)
+    else:
+        score_v = None
+        rmse_v = None
+        rpd_v = None
+
+        return (rpd_c, rpd_cv, rpd_v, score_c, score_cv, score_v, rmse_c, rmse_cv, rmse_v)
+
 
 def loadings_plot():
     pass
@@ -216,7 +220,7 @@ if __name__ == '__main__':
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[7:])
+    wavenumbers_old = list(df.columns[8:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
