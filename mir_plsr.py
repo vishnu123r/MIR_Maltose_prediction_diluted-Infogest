@@ -21,20 +21,20 @@ import os
 cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
-exp_type = "All"
-starch = "All"
-y_variable = "maltose_concentration"
+exp_type = "dil"
+starch = "Gelose 50"
+y_variable = "time"
 
-start_WN = 3998
+start_WN = 1499
 end_WN = 800
 
-sg_smoothing_point = 31
-sg_derivative = 1
+sg_smoothing_point = 21
+sg_derivative = 2
 sg_polynomial = 2
 
 no_of_components = 5
 sample_presentation = "Supernatant"
-#sample_presentation = "Turbid"
+sample_presentation = "Turbid"
 
 
 tick_distance = 80
@@ -112,26 +112,26 @@ rpd_cv = se_cv/rmse_cv
 rpd_ev = se_ev/rmse_ev
 
 
-#Print stats
-print('R2 calib: %5.3f'  % score_c)
-print('R2 CV: %5.3f'  % score_cv)
-print('R2 EV: %5.3f'  % score_ev)
-print("\n")
+# #Print stats
+# print('R2 calib: %5.3f'  % score_c)
+# print('R2 CV: %5.3f'  % score_cv)
+# print('R2 EV: %5.3f'  % score_ev)
+# print("\n")
 
-print('RMSE calib: %5.3f' % rmse_c)
-print('RMSE CV: %5.3f' % rmse_cv)
-print('RMSE EV: %5.3f' % rmse_ev)
-print("\n")
+# print('RMSE calib: %5.3f' % rmse_c)
+# print('RMSE CV: %5.3f' % rmse_cv)
+# print('RMSE EV: %5.3f' % rmse_ev)
+# print("\n")
 
-print('MAE calib: %5.3f' % mae_c)
-print('MAE CV: %5.3f' % mae_cv)
-print('MAE EV: %5.3f' % mae_ev)
-print("\n")
+# print('MAE calib: %5.3f' % mae_c)
+# print('MAE CV: %5.3f' % mae_cv)
+# print('MAE EV: %5.3f' % mae_ev)
+# print("\n")
 
-print('RPD calib: %5.3f' % rpd_c)
-print('RPD CV: %5.3f' % rpd_cv)
-print('RPD EV: %5.3f' % rpd_ev)
-print("\n")
+# print('RPD calib: %5.3f' % rpd_c)
+# print('RPD CV: %5.3f' % rpd_cv)
+# print('RPD EV: %5.3f' % rpd_ev)
+# print("\n")
 
 def get_peaks(loadings, height):
     positive_peaks,_ = find_peaks(loadings, height = height)
@@ -140,7 +140,7 @@ def get_peaks(loadings, height):
 
     return peaks
 
-quit()
+x_load = plsr.x_loadings_
 
 path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
 if not os.path.exists(path):
@@ -177,7 +177,7 @@ def create_loadings_plot(starch, y_variable, wavenumbers, x_load, txt_string, ti
 
         ax.set_title("{}-{}".format(starch, y_variable))
 
-        ax.tick_params(axis='both', which='major', labelsize=5)
+        ax.tick_params(axis='both', which='major', labelsize=8)
         ax.set_xticks(wavenumbers[::tick_distance])
         ax.set_xticklabels(wavenumbers[::tick_distance])
         ax.invert_xaxis()

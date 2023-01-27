@@ -79,7 +79,7 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
 if __name__ == '__main__':
 
     ##### INPUTS ##########
-    y_variable = 'starch_digestibility'
+    y_variable = 'maltose_concentration'
     data_file = "dil+infogest_mir_noPr_conc"
     group = True
 

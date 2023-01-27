@@ -13,27 +13,14 @@ from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 from math import sqrt
 
+from functions import format_df
 
-def convert_to_arrays(df, sample_presentation, wavenumber_region, y_variable = 'maltose_concentration'):
-
-    """Converts dataframe in to arrays which can be used to do PLSR"""
-
-    if sample_presentation not in ["Turbid", "Supernatant"]:
-        raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
-
-    df = df[df['supernatant'] == sample_presentation]
-
-
-    X = df[wavenumber_region].values
-    y = df[y_variable].values
-
-    return X, y
-
-class OptimizePlsr(object):
-    def __init__(self):
-        pass
+class PlsrMir(object):
+    def __init__(self, df, spectra_region = (8,) ):
+        self.df = df
+        self.wavenumbers = list(df.columns[spectra_region[0]:spectra_region[1]])
     
-    def conduct_pls(components, X, y):
+    def _conduct_pls(components, X, y):
         
         """Conducts PLS and returns values"""
         
@@ -67,7 +54,7 @@ class OptimizePlsr(object):
         
         return (y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load)
     
-    def _optimise_plsr_cv(self, x, Y, n_comp, plot_components = False):
+    def _optimise_plsr_factors(self, x, Y, n_comp, plot_components = False):
         '''Run PLS including a variable number of components, up to n_comp, and calculate RMSE
        
         Returns optimum number of components based on minimum RMSE'''
@@ -77,7 +64,7 @@ class OptimizePlsr(object):
 
         for component in components:
             
-            y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = self.conduct_pls(component, x, Y)
+            y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = self._conduct_pls(component, x, Y)
             
             rmse.append(rmse_cv)
     
