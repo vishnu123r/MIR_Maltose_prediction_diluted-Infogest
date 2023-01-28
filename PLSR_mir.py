@@ -13,12 +13,59 @@ from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 from math import sqrt
 
+import os
+
 from functions import format_df
 
 class PlsrMir(object):
-    def __init__(self, df, spectra_region = (8,) ):
+    def __init__(self, df, spectra_begin = 8):
         self.df = df
-        self.wavenumbers = list(df.columns[spectra_region[0]:spectra_region[1]])
+        self.wavenumbers = list(df.columns[spectra_begin:])
+        self.other_vars = list(df.columns[0:spectra_begin])
+    
+    def _ready_img_folder(self, y_variable, exp_type, img_type, starch, sample_presentation, wavenumbers, sgderivative, sg_smoothing_points):
+        
+        """This function creates a folder or removes all the files if folder exists"""
+        
+        path = f"output/{y_variable}/images/{exp_type}/{img_type}/{starch}/{sample_presentation}/{wavenumbers[0]}-{wavenumbers[-1]}/{sgderivative}sg{sg_smoothing_points}"
+        if not os.path.exists(path):
+            os.makedirs(path)
+        else: 
+            filelist = [file for file in os.listdir(path)]
+            for file in filelist:
+                os.remove(os.path.join(path, file))
+    
+    
+    def _get_wavenumber_range(self, wavenumber_start = 3998, wavenumber_end = 800):
+        
+        """Gets the wavenumbers for analysis"""
+        
+        if wavenumber_start < wavenumber_end:
+            raise("Starting wavenumber is higher than ending wavenumber")    
+        
+        wavenumbers_int = list(map(int, self.wavenumbers))
+        wavenumber_for_analysis = []
+        for wavenumber in wavenumbers_int:
+            if wavenumber <= int(wavenumber_start) and wavenumber >= int(wavenumber_end):
+                wavenumber_for_analysis.append(str(wavenumber))
+
+        return wavenumber_for_analysis
+    
+    def convert_to_arrays(self, sample_presentation, wavenumber_region = (3998, 800), y_variable = 'maltose_concentration'):
+
+        """Converts dataframe in to arrays which can be used to do PLSR"""
+
+        if sample_presentation not in ["Turbid", "Supernatant"]:
+            raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
+        
+        df_subset = self.df[self.df['supernatant'] == sample_presentation]
+        wavenumber_region = self._get_wavenumber_range(wavenumber_region[0],wavenumber_region[1])
+        
+        X = df_subset[wavenumber_region].values
+        y = df_subset[y_variable].values
+
+        return X, y
+    
     
     def _conduct_pls(components, X, y):
         
@@ -97,3 +144,12 @@ class PlsrMir(object):
     
     def optimise_plsr(self):
         pass
+    
+    
+    
+if __name__ == '__main__':
+    df_cal = pd.read_csv("data/dil+infogest_mir_noPr_conc.csv")
+    df_cal= format_df(df_cal)
+    
+    plsr = PlsrMir(df_cal)
+    X, y = plsr.convert_to_arrays(sample_presentation= "Supernatant")
