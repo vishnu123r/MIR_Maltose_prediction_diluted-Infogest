@@ -21,8 +21,8 @@ import os
 cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
-exp_type = "dil"
-starch = "Gelose 50"
+exp_type = "infogest"
+starch = "Potato"
 y_variable = "time"
 
 start_WN = 1499
@@ -58,6 +58,7 @@ if exp_type != "All":
 #Selecting Wavenumbers and assign x and Y values
 wavenumbers = list(df_cal.columns[8:])
 wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+
 
 #X,y arrays - Calibration
 X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
