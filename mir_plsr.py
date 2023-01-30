@@ -18,14 +18,14 @@ from math import sqrt
 import os
 
 ############# ----INPUTS---- ##############
-cal_file_location = "data/dil+infogest_mir_noPr_conc.csv"
+cal_file_location = "data/dil+infogest_mir_all_conc_new_samples.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
-exp_type = "infogest"
-starch = "Potato"
+exp_type = "dil"
+starch = "Rice"
 y_variable = "time"
 
-start_WN = 1499
+start_WN = 1500
 end_WN = 800
 
 sg_smoothing_point = 21
@@ -141,7 +141,34 @@ def get_peaks(loadings, height):
 
     return peaks
 
-x_load = plsr.x_loadings_
+
+
+def pls_explained_variance(pls, X, Y_true, do_plot=False):
+    r2 = np.zeros(pls.n_components)
+    x_transformed = pls.transform(X) # Project X into low dimensional basis
+    for i in range(0, pls.n_components):
+        Y_pred = (np.dot(x_transformed[:, i][:, np.newaxis],
+                         pls.y_loadings_[:, i][:, np.newaxis].T) * pls._y_std   
+                  + pls._y_mean)
+        r2[i] = np.round(r2_score(Y_true, Y_pred)*100, 2)
+        overall_r2 = np.round(r2_score(Y_true, pls.predict(X))*100,2)  # Use all components together
+
+    #x explained variance
+    tot_variance_x = sum(np.var(X, axis=0))
+    variance_x_score = np.var(x_transformed, axis=0)
+    x_explained_variance = np.round(variance_x_score*100/tot_variance_x, 2)
+
+    if do_plot:
+        component = np.arange(pls.n_components) + 1
+        plt.plot(component, r2, '.-')
+        plt.xticks(component)
+        plt.xlabel('PLS Component #'), plt.ylabel('r2')
+        plt.title(f'Summed individual r2: {np.sum(r2):.3f}, '
+                  f'Overall r2: {overall_r2:.3f}')
+        plt.show()
+
+    return x_explained_variance, r2, overall_r2
+
 
 path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
 if not os.path.exists(path):
@@ -152,15 +179,20 @@ else:
         os.remove(os.path.join(path, f))
 
 
-def create_loadings_plot(starch, y_variable, wavenumbers, x_load, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True, height = loadings_height):
+def create_loadings_plot(starch, y_variable, wavenumbers, pls, X, Y_true, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True, height = loadings_height):
     
     if y_variable not in ["maltose_concentration", "time"]:
         raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
 
+    x_load = pls.x_loadings_
+
+    x_explained_variance, y_explained_variance, overall_r2 = pls_explained_variance(plsr, X, Y_true)
 
     for comp in range(x_load.shape[1]):
 
         factor_load = x_load[:,comp]
+        x_exp_var = x_explained_variance[comp]
+        y_exp_var = y_explained_variance[comp]
 
         fig, ax = plt.subplots()
         wavenumbers = list(map(int,wavenumbers))
@@ -174,9 +206,9 @@ def create_loadings_plot(starch, y_variable, wavenumbers, x_load, txt_string, ti
                 ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.01), size =5)
 
         ax.set_xlabel('Wavenumber (cm-1)')
-        ax.set_ylabel('Loadings (Factor {})'.format(comp+1))
+        ax.set_ylabel(f"Factor {comp+1} [{x_exp_var:.2f}%, {y_exp_var:.2f}%]")
 
-        ax.set_title("{}-{}".format(starch, y_variable))
+        ax.set_title(f"{starch}-{y_variable}")
 
         ax.tick_params(axis='both', which='major', labelsize=8)
         ax.set_xticks(wavenumbers[::tick_distance])
@@ -192,9 +224,13 @@ def create_loadings_plot(starch, y_variable, wavenumbers, x_load, txt_string, ti
     with open(path + '/parameters.txt', 'w') as f:
         f.write(txt_string)
 
+    loadings_string = f"Starch_type: {starch} \nX explained variance: {x_explained_variance} \nY explained variance: {y_explained_variance} \nOverall r2: {overall_r2}"
+    with open(path + '/expl_variance.txt', 'w') as f:
+        f.write(loadings_string)
+
 
 create_loadings_plot(starch = starch, y_variable = y_variable, 
-wavenumbers = wavenumbers, x_load = x_load, txt_string=txt_string, tick_distance = tick_distance, 
+wavenumbers = wavenumbers, pls = plsr, X = X_cal, Y_true =y_cal, txt_string=txt_string, tick_distance = tick_distance, 
 sg_derivative=sg_derivative, sg_smoothing_point=sg_smoothing_point)
 
 

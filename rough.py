@@ -1,3 +1,61 @@
+from sklearn.decomposition import PCA
+from functions import conduct_pls, plot_q_t_plot, convert_to_arrays, format_df, apply_sgfilter 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from optimize_mir import get_wavenumber_range
+
+############# ----INPUTS---- ##############
+cal_file_location = "data/dil+infogest_mir_all_conc.csv"
+val_file_location = "data/infogest_validation_mir.csv"
+
+exp_type = "dil"
+starch = "All"
+y_variable = "time"
+
+start_WN = 1500
+end_WN = 800
+
+sg_smoothing_point = 21
+sg_derivative = 2
+sg_polynomial = 2
+
+no_of_components = 5
+sample_presentation = "Supernatant"
+sample_presentation = "Turbid"
+
+
+tick_distance = 80
+loadings_height = 0.1
+
+txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n"  + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: "  + sample_presentation + "\n" + " tick_distance: " + str(tick_distance) + "\n" + " loadings_height: " + str(loadings_height) + "\n"
+
+#################
+
+df_cal = pd.read_csv(cal_file_location)
+df_cal= format_df(df_cal)
+
+if starch != "All":
+    df_cal = df_cal[df_cal["starch"] == starch]
+
+if exp_type != "All":
+    df_cal = df_cal[df_cal["exp_type"] == exp_type]
+
+#Selecting Wavenumbers and assign x and Y values
+wavenumbers = list(df_cal.columns[8:])
+wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
+
+#X,y arrays - Calibration
+X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
+X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
+
+#apply PCA
+pca = PCA(n_components=20)
+pca.fit(X_cal)
+#print(pca.explained_variance_.sum())
+
+print(pca.explained_variance_.sum()/sum(np.var(X_cal, axis=0)))
+quit()
 fig, ax = plt.subplots()
 
 for starch in ["Rice", "Gelose 50", "Gelose 80", "Potato", "Pregelled Maize Starch"]:
