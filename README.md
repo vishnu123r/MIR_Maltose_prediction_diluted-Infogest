@@ -22,7 +22,7 @@ This is different from the MIR_Maltose_prediction repo as this script analyses d
 - Run the script to optimize the hyperparameters and predict the maltose concentration: python optimize_mir.py
 
 
-##Usage
+## Usage
 The script can be modified to use your own mid-infrared spectroscopy data and desired range of hyperparameters. The optimized hyperparameters and predicted maltose concentration will be exported as a CSV file.
 
 ## Known Issues
