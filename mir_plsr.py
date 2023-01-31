@@ -22,7 +22,7 @@ cal_file_location = "data/dil+infogest_mir_all_conc_new_samples.csv"
 val_file_location = "data/infogest_validation_mir.csv"
 
 exp_type = "dil"
-starch = "Rice"
+starch = "All"
 y_variable = "time"
 
 start_WN = 1500
@@ -65,7 +65,7 @@ X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_vari
 X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
 #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
-X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state=42)
+# X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state=42)
 
 # #X.y Arrays - External Validation
 # X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
@@ -83,56 +83,57 @@ loocv = LeaveOneOut()
 y_cv = np.ravel(cross_val_predict(plsr, X_cal, y_cal, cv=loocv))
 
 #External Validation
-y_ev = np.ravel(plsr.predict(X_val))
+#y_ev = np.ravel(plsr.predict(X_val))
 
 # Calculate scores for calibration, cross-validation, and external-validation
 score_c = r2_score(y_cal, y_c)
 score_cv = r2_score(y_cal, y_cv)
-score_ev = r2_score(y_val, y_ev)
+#score_ev = r2_score(y_val, y_ev)
 
 # Calculate RMSE for calibration, cross-validation, and external-validation
 rmse_c = sqrt(mean_squared_error(y_cal, y_c))
 rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
-rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
+#rmse_ev = sqrt(mean_squared_error(y_val, y_ev))
 
 # Calculate MAE for calibration, cross-validation, and external-validation
 mae_c = mean_absolute_error(y_cal, y_c)
 mae_cv = mean_absolute_error(y_cal, y_cv)
-mae_ev = mean_absolute_error(y_val, y_ev)
+##mae_ev = mean_absolute_error(y_val, y_ev)
 # err = (y_ev-y_val)*100/y_val
 # df_err = pd.DataFrame({'Actual_external_val': y_val, 'MAEev': err})
 
 #calculate standard error of the estimate
 se_c = np.std(y_cal)
 se_cv = np.std(y_cal)
-se_ev = np.std(y_val)
+#se_ev = np.std(y_val)
 
 #RPD values
 rpd_c = se_c/rmse_c
 rpd_cv = se_cv/rmse_cv
-rpd_ev = se_ev/rmse_ev
+#rpd_ev = se_ev/rmse_ev
 
 
 # #Print stats
+# print("Starch type: ", starch)
+# print("sample_size: ", X_cal.shape[0])
+# print("\n")
 # print('R2 calib: %5.3f'  % score_c)
 # print('R2 CV: %5.3f'  % score_cv)
-# print('R2 EV: %5.3f'  % score_ev)
+# #print('R2 EV: %5.3f'  % score_ev)
 # print("\n")
-
 # print('RMSE calib: %5.3f' % rmse_c)
 # print('RMSE CV: %5.3f' % rmse_cv)
-# print('RMSE EV: %5.3f' % rmse_ev)
+# ##print('RMSE EV: %5.3f' % rmse_ev)
 # print("\n")
-
 # print('MAE calib: %5.3f' % mae_c)
 # print('MAE CV: %5.3f' % mae_cv)
-# print('MAE EV: %5.3f' % mae_ev)
+# #print('MAE EV: %5.3f' % mae_ev)
 # print("\n")
-
 # print('RPD calib: %5.3f' % rpd_c)
 # print('RPD CV: %5.3f' % rpd_cv)
-# print('RPD EV: %5.3f' % rpd_ev)
+# #print('RPD EV: %5.3f' % rpd_ev)
 # print("\n")
+
 
 def get_peaks(loadings, height):
     positive_peaks,_ = find_peaks(loadings, height = height)
@@ -140,7 +141,6 @@ def get_peaks(loadings, height):
     peaks = np.concatenate((positive_peaks, negative_peaks))
 
     return peaks
-
 
 
 def pls_explained_variance(pls, X, Y_true, do_plot=False):
@@ -178,6 +178,9 @@ else:
     for f in filelist:
         os.remove(os.path.join(path, f))
 
+stats_string = f"Starch type: {starch} \n sample_size: {X_cal.shape[0]} \n \n R2 calib: {score_c} \n R2 CV: {score_cv} \n \n RMSE calib: {rmse_c} \n RMSE CV: {rmse_cv} \n \n MAE calib: {mae_c} \n MAE CV: {mae_cv} \n \n RPD calib: {rpd_c} \n RPD CV: {rpd_cv}"
+with open(path + f'/stats_{starch}.txt', 'w') as f:
+    f.write(stats_string)
 
 def create_loadings_plot(starch, y_variable, wavenumbers, pls, X, Y_true, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True, height = loadings_height):
     

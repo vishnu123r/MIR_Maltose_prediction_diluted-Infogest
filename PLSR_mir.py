@@ -94,15 +94,18 @@ class PlsrMir(object):
 
         return peaks
     
+    def _raise_value_error_y(self, y_variable):
+        if y_variable not in self.other_vars:
+            raise ValueError(f"The Argument '{y_variable}' is not mentioned in the columns. Available column names are {str(self.other_vars)}")
+    
     def create_loadings_plot(self, components, starch, y_variable, wavenumber_region, sample_presentation, exp_type, sg_smoothing_points, sg_derivative, sg_polynomial, peaks_on = True, height = 0.1):
-
+        
+        self._raise_value_error_y(y_variable)
+        
         X, y, wavenumber_list = self._convert_to_arrays(sample_presentation = sample_presentation, starch = starch, exp_type = exp_type, wavenumber_region = wavenumber_region, y_variable = y_variable)
         path = self._ready_img_folder(y_variable = y_variable, exp_type = exp_type, img_type = "Loadings", starch = starch, sample_presentation = sample_presentation, wavenumber_list = wavenumber_list, sg_derivative = sg_derivative, sg_smoothing_points = sg_smoothing_points, sg_polynomial=sg_polynomial)
         y_c, y_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = self._conduct_pls(components = components, X = X, y = y) 
         
-        if y_variable not in ["maltose_concentration", "time"]:
-            raise("The Argument Sample presentation should either be 'maltose_concentration' or 'time'")
-
         for comp in range(x_load.shape[1]):
 
             factor_load = x_load[:,comp]
@@ -187,5 +190,5 @@ if __name__ == '__main__':
     df_cal= format_df(df_cal)
     
     plsr = PlsrMir(df_cal, "Trial")
-    plsr.create_loadings_plot(components = 4, starch = "Potato", y_variable = "time", wavenumber_region = (1499,800), sample_presentation = "Supernatant"
+    plsr.create_loadings_plot(components = 4, starch = "Potato", y_variable = "tim.e", wavenumber_region = (1499,800), sample_presentation = "Supernatant"
                               , exp_type = "dil", sg_smoothing_points = 21, sg_derivative = 2, sg_polynomial = 3)
