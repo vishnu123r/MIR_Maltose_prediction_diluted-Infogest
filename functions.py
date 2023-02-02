@@ -17,12 +17,10 @@ def format_df(df):
     ### This function formats df for further analysis
 
     #Drop columns and rename
-    drop_columns = ['Technical_rep']
-    df = df.drop(drop_columns,  axis= 1)
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[8:])
+    wavenumbers_old = list(df.columns[9:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))
@@ -30,14 +28,9 @@ def format_df(df):
     
     return df
 
-def convert_to_arrays(df, sample_presentation, wavenumber_region, y_variable = 'maltose_concentration'):
+def convert_to_arrays(df, wavenumber_region, y_variable = 'maltose_concentration'):
 
     """Converts dataframe in to arrays which can be used to do PLSR"""
-
-    if sample_presentation not in ["Turbid", "Supernatant"]:
-        raise("The Argument Sample presentation should either be 'Turbid' or 'Supernatant'")
-
-    df = df[df['supernatant'] == sample_presentation]
 
 
     X = df[wavenumber_region].values
@@ -220,7 +213,7 @@ if __name__ == '__main__':
     df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
 
     #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[8:])
+    wavenumbers_old = list(df.columns[9:])
     wavenumbers = list(map(float, wavenumbers_old))
     wavenumbers = list(map(round, wavenumbers))
     wavenumbers = list(map(str, wavenumbers))

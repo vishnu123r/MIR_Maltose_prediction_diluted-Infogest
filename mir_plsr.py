@@ -18,14 +18,15 @@ from math import sqrt
 import os
 
 ############# ----INPUTS---- ##############
-cal_file_location = "data/dil+infogest_mir_all_conc_new_samples.csv"
+cal_file_location = "data/dil+infogest_mir_noPr(Infogest)_conc_NoNewSamples.csv"
 val_file_location = "data/infogest_validation_mir.csv"
+project_name = "NoNewSamples"
 
-exp_type = "dil"
+exp_type = "All"
 starch = "All"
 y_variable = "time"
 
-start_WN = 1500
+start_WN = 3998
 end_WN = 800
 
 sg_smoothing_point = 21
@@ -44,10 +45,10 @@ txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_loca
 
 #################
 df_cal = pd.read_csv(cal_file_location)
-df_val = pd.read_csv(val_file_location)
+#df_val = pd.read_csv(val_file_location)
 
 df_cal= format_df(df_cal)
-df_val= format_df(df_val)
+#df_val= format_df(df_val)
 
 if starch != "All":
     df_cal = df_cal[df_cal["starch"] == starch]
@@ -55,20 +56,40 @@ if starch != "All":
 if exp_type != "All":
     df_cal = df_cal[df_cal["exp_type"] == exp_type]
 
+if sample_presentation != "All":
+    df_cal = df_cal[df_cal["supernatant"] == sample_presentation]
+
 #Selecting Wavenumbers and assign x and Y values
-wavenumbers = list(df_cal.columns[8:])
+wavenumbers = list(df_cal.columns[9:])
 wavenumbers = get_wavenumber_range(wavenumbers, start_WN, end_WN)
 
 
 #X,y arrays - Calibration
-X_cal,y_cal = convert_to_arrays(df_cal, sample_presentation, wavenumbers, y_variable = y_variable)
+X_cal,y_cal = convert_to_arrays(df_cal, wavenumbers, y_variable = y_variable)
 X_cal = apply_sgfilter(X_cal, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
 #X_cal = savgol_filter(X_cal, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
+
+
+print(X_cal)
+quit()
+
+def get_df_sg(df_cal,X_cal, project_name, wavenumbers):
+
+    df_other = df_cal.iloc[:,0:8].reset_index()
+    df_other.drop(['index'], axis=1, inplace=True)
+    df_sg = pd.DataFrame(X_cal, columns = wavenumbers)
+    df_sg = pd.concat([df_other, df_sg], axis=1)
+
+    df_sg.to_excel("data/sg_" + project_name + ".xlsx", index=False)
+
+    return df_sg
+
+
 
 # X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state=42)
 
 # #X.y Arrays - External Validation
-# X_val,y_val = convert_to_arrays(df_val, sample_presentation, wavenumbers, y_variable = y_variable)
+# X_val,y_val = convert_to_arrays(df_val, wavenumbers, y_variable = y_variable)
 # X_val = apply_sgfilter(X_val, wavenumbers, sg_smoothing_point, sg_polynomial, sg_derivative)
 # #X_val = savgol_filter(X_val, sg_smoothing_point, polyorder=sg_polynomial, deriv= sg_derivative)
 
@@ -113,7 +134,7 @@ rpd_cv = se_cv/rmse_cv
 #rpd_ev = se_ev/rmse_ev
 
 
-# #Print stats
+#Print stats
 # print("Starch type: ", starch)
 # print("sample_size: ", X_cal.shape[0])
 # print("\n")
@@ -170,17 +191,17 @@ def pls_explained_variance(pls, X, Y_true, do_plot=False):
     return x_explained_variance, r2, overall_r2
 
 
-path = "output/{0}/images/{1}/loadings/{2}/{3}/{4}-{5}/{6}sg{7}".format(y_variable, exp_type, starch, sample_presentation, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
-if not os.path.exists(path):
-    os.makedirs(path)
-else: 
-    filelist = [f for f in os.listdir(path)]
-    for f in filelist:
-        os.remove(os.path.join(path, f))
+# path = f"output/{project_name}/{y_variable}/images/{exp_type}/loadings/{starch}/{sample_presentation}/{wavenumbers[0]}-{wavenumbers[-1]}/{sg_derivative}sg{sg_smoothing_point}"
+# if not os.path.exists(path):
+#     os.makedirs(path)
+# else: 
+#     filelist = [f for f in os.listdir(path)]
+#     for f in filelist:
+#         os.remove(os.path.join(path, f))
 
-stats_string = f"Starch type: {starch} \n sample_size: {X_cal.shape[0]} \n \n R2 calib: {score_c} \n R2 CV: {score_cv} \n \n RMSE calib: {rmse_c} \n RMSE CV: {rmse_cv} \n \n MAE calib: {mae_c} \n MAE CV: {mae_cv} \n \n RPD calib: {rpd_c} \n RPD CV: {rpd_cv}"
-with open(path + f'/stats_{starch}.txt', 'w') as f:
-    f.write(stats_string)
+# stats_string = f"Starch type: {starch} \n sample_size: {X_cal.shape[0]} \n \n R2 calib: {score_c} \n R2 CV: {score_cv} \n \n RMSE calib: {rmse_c} \n RMSE CV: {rmse_cv} \n \n MAE calib: {mae_c} \n MAE CV: {mae_cv} \n \n RPD calib: {rpd_c} \n RPD CV: {rpd_cv}"
+# with open(path + f'/stats_{starch}.txt', 'w') as f:
+#     f.write(stats_string)
 
 def create_loadings_plot(starch, y_variable, wavenumbers, pls, X, Y_true, txt_string, tick_distance, sg_smoothing_point, sg_derivative, peaks_on = True, height = loadings_height):
     
@@ -220,16 +241,20 @@ def create_loadings_plot(starch, y_variable, wavenumbers, pls, X, Y_true, txt_st
         ax.set_xlim(wavenumbers[0], wavenumbers[-1])
 
         plt.axhline(0, color='black', linewidth = 0.5)
+        plt.axvline(1047, color='black', linewidth = 1)
+        plt.axvline(1022, color='black', linewidth = 1)
         file_name = "/Load_{0}_{1}_{2}_{3}_{4}sg{5}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
         
-        plt.savefig(path+file_name, dpi = 1000)
+        plt.show()
 
-    with open(path + '/parameters.txt', 'w') as f:
-        f.write(txt_string)
+    #     plt.savefig(path+file_name, dpi = 1000)
 
-    loadings_string = f"Starch_type: {starch} \nX explained variance: {x_explained_variance} \nY explained variance: {y_explained_variance} \nOverall r2: {overall_r2}"
-    with open(path + '/expl_variance.txt', 'w') as f:
-        f.write(loadings_string)
+    # with open(path + '/parameters.txt', 'w') as f:
+    #     f.write(txt_string)
+
+    # loadings_string = f"Starch_type: {starch} \nX explained variance: {x_explained_variance} \nY explained variance: {y_explained_variance} \nOverall r2: {overall_r2}"
+    # with open(path + '/expl_variance.txt', 'w') as f:
+    #     f.write(loadings_string)
 
 
 create_loadings_plot(starch = starch, y_variable = y_variable, 
