@@ -16,7 +16,7 @@ val_file_location = "data/infogest_validation_mir.csv"
 
 exp_type = "dil"
 starch = "Rice"
-y_variable = "time"
+y_variable = "maltose_concentration"
 
 start_WN = 1500
 end_WN = 800
@@ -63,6 +63,10 @@ X_cal = scaler.fit_transform(X_cal)
 #mutiple all values in X_cal by 10^4 (This is done to circumvent the issue of getting a covariance matrix equal to zero)
 #X_cal = X_cal * 10**4
 
+print(pd.DataFrame(y_cal).describe().T)
+quit()
+
+
 #apply PCA
 pca = PCA(n_components=no_of_components)
 pca.fit(X_cal)
@@ -79,7 +83,7 @@ cutoff = chi2.ppf(0.9999, T.shape[1]-1)
 print(cutoff)
 print(df_mahalanobis[df_mahalanobis['mahalanobis'] > cutoff])
 
-quit()
+
 
 colours = [plt.cm.jet(float(i)/max(m)) for i in m]
 with plt.style.context(('ggplot')):

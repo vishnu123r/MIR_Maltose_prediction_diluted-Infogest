@@ -17,7 +17,9 @@ def get_wavenumber_range(wavenumbers_list, wavenumber_start = 3998, wavenumber_e
 
     return wavenumber_for_analysis
 
-def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_variable = 'maltose_concentration', group = False):
+
+
+def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_variable = 'maltose_concentration', group = False, ks =True):
     
     """ Applies PLS for the given range of wavenumbers and different hyper parameters for Savgol filter
 
@@ -44,44 +46,48 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
             wavenumber_string = "{0}-{1} cm-1".format(wavenumber_region[0], wavenumber_region[-1])
             print(f"Starch: {starch}, exp_type: {exp_type}, wavenumber_region: {wavenumber_string}")
 
-            df_subset = df[(df['starch'] == starch) & (df['exp_type'] == exp_type)]
-            no_samples = df_subset.shape[0]
-            X,y = convert_to_arrays(df_subset, sample_presentation, wavenumber_region, y_variable)
+            df_subset = df[(df['starch'] == starch) & (df['exp_type'] == exp_type) & (df['supernatant'] == sample_presentation)]
+            
+            X,y = convert_to_arrays(df_subset, wavenumber_region, y_variable)
             X_cal, X_val, y_cal, y_val = ks.train_test_split(X, y, test_size=0.2, random_state=42)
-
+            no_samples = X_cal.shape[0]
             for deriv, window in sg_parameters:
-                X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
-                X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                if deriv != 0 and window != 0:
+                    print(f"Applying Savitsky-Golay filter with deriv: {deriv} and window: {window}")
+                    X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                    X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                 optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
                 rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
                 variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
-                model_stats_list.append(variable_names)
+                model_stats_list.append(variable_names), y_cal
 
     else:
         for wavenumber_region in wavenumber_regions:
-            no_samples = df.shape[0]
             X = df[wavenumber_region].values
             X_cal, X_val, y_cal, y_val = ks.train_test_split(X, y, test_size=0.2, random_state=42)
+            no_samples = X_cal.shape[0]
             wavenumber_string = "{0}-{1} cm-1".format(wavenumber_region[0], wavenumber_region[-1])
             starch = "All"
             exp_type = "All"
             print("Currently doing wavenumber region - {0} sample presentation - {1}".format(wavenumber_string, sample_presentation))
             for deriv, window in sg_parameters:
-                X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
-                X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                if deriv != 0 and window != 0:
+                    print(f"Applying Savitsky-Golay filter with deriv: {deriv} and window: {window}")
+                    X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
+                    X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                 optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
                 rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
                 variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
                 model_stats_list.append(variable_names)
 
-    return model_stats_list
+    return model_stats_list, y_cal
 
 if __name__ == '__main__':
 
     ##### INPUTS ##########
-    y_variable = 'maltose_concentration'
-    data_file = "dil+infogest_mir_noPr_conc"
-    group = True
+    y_variable = 'time'
+    data_file = "dil+infogest_mir_noPr(Infogest)_conc_NoNewSamples"
+    group = False
 
     ###########################
     drop_columns = ['Technical_rep']
@@ -102,6 +108,7 @@ if __name__ == '__main__':
     df_turbid = df[df['supernatant'] == "Turbid"]
     df_SN = df[df['supernatant'] == "Supernatant"]
 
+
     #Selecting Wavenumbers
     wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
     wavenumbers_1500_800 = get_wavenumber_range(wavenumbers, 1500, 800)
@@ -112,22 +119,29 @@ if __name__ == '__main__':
 
     #defining Hyper parameters
     wavenumber_regions = [wavenumbers_3998_800, wavenumbers_1500_800, wavenumbers_1250_909, wavenumbers_SN]
-    sg_parameters = [(1,9),(1,7), (1,5), (1,3), (2, 9), (2, 7), (2,5), (1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
+    sg_parameters = [(0,0), (1,9),(1,7), (1,5), (1,3), (2, 9), (2, 7), (2,5), (1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
 
     #Get descriptive stats of Y
     y = df_turbid[y_variable].values
     descriptive_y = df_turbid[y_variable].describe().to_frame().T
     descriptive_y['Coe_variation'] = descriptive_y['std']/descriptive_y['mean']
 
-    model_stats_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable, group=group)
-    model_stats_supernatant = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable, group=group)
+    model_stats_turbid, y_cal_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable, group=group)
+    model_stats_supernatant, y_cal_sn = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable, group=group)
 
     excel_columns = ['Wavenumber_region', 'Starch', 'Exp_type', 'no_samples', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components", 'rpd_c', 'rpd_cv', 'rpd_ev','Score_c', 'RMSEC', 'Score_CV', 'RMSECV', 'Score_EV', 'RMSE_EV']
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =excel_columns)
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =excel_columns)
 
+    descriptive_y_turbid = pd.DataFrame(y_cal_turbid).describe().T
+    descriptive_y_turbid['Coe_variation'] = descriptive_y_turbid['std']/descriptive_y_turbid['mean']
+
+    descriptive_y_sn = pd.DataFrame(y_cal_sn).describe().T
+    descriptive_y_sn['Coe_variation'] = descriptive_y_sn['std']/descriptive_y_sn['mean']
+    
     with pd.ExcelWriter('output/{0}/{1}'.format(y_variable, 'outks_' + data_file + '_' + y_variable + '_' + str(group)+".xlsx" )) as writer:
     #with pd.ExcelWriter("output/test.xlsx" ) as writer:
-        descriptive_y.to_excel(writer, sheet_name='descriptive_stats')
+        descriptive_y_turbid.to_excel(writer, sheet_name='descriptive_stats_mx')
+        descriptive_y_sn.to_excel(writer, sheet_name='descriptive_stats_sn')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')
