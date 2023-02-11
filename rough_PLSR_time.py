@@ -28,7 +28,7 @@ project_name = "ForPaper"
 
 exp_type = "All"
 starch = "All"
-y_variable = "starch_digestibility"
+y_variable = "maltose_concentration"
 
 start_WN = 3998
 end_WN = 800
@@ -84,6 +84,9 @@ if sg_derivative != 0 and sg_smoothing_point != 0:
     X_cal = apply_sgfilter(X = X_cal, wavenumber_region = wavenumbers, window_length = sg_smoothing_point, poly_order = sg_polynomial, deriv = sg_derivative)
 
 X_cal, X_val, y_cal, y_val, y_time_cal, y_time_val = train_test_split(X_cal, y_cal, y_time, test_size=0.2, random_state=42)
+
+
+quit()
 
 
 #Apply PLSR

@@ -1,4 +1,4 @@
-from functions import apply_sgfilter, optimise_pls_cv, conduct_pls, convert_to_arrays
+from functions import apply_sgfilter, optimise_pls_cv, conduct_pls, convert_to_arrays, get_stats
 import numpy as np
 import pandas as pd
 import kennard_stone as ks
@@ -57,7 +57,10 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
                     X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                     X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                 optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
-                rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                y_c, y_cv, y_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                score_c, rmse_c, rpd_c = get_stats(y_cal, y_c)
+                score_cv, rmse_cv, rpd_cv = get_stats(y_cal, y_cv)
+                score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)                
                 variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
                 model_stats_list.append(variable_names), y_cal
 
@@ -76,7 +79,10 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
                     X_cal = apply_sgfilter(X_cal, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                     X_val = apply_sgfilter(X_val, wavenumber_region, window_length=window, poly_order=2, deriv=deriv)
                 optimum_components = optimise_pls_cv(X_cal, y_cal, n_comp = 15, plot_components=False)
-                rpd_c, rpd_cv, rpd_ev, score_c, score_cv, score_ev, rmse_c, rmse_cv, rmse_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                y_c, y_cv, y_ev = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+                score_c, rmse_c, rpd_c = get_stats(y_cal, y_c)
+                score_cv, rmse_cv, rpd_cv = get_stats(y_cal, y_cv)
+                score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)
                 variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
                 model_stats_list.append(variable_names)
 

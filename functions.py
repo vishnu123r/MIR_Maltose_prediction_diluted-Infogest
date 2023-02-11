@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
  
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, find_peaks
  
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.model_selection import cross_val_predict, LeaveOneOut, cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score
+import os 
 
 from math import sqrt
 
@@ -120,36 +121,21 @@ def conduct_pls(components, X_cal, X_val, y_cal, y_val, val = False):
     # For to the entire dataset
     pls_opt.fit(X_cal, y_cal)
     y_c = pls_opt.predict(X_cal)
-    
-    #Stats for calibration
-    score_c = r2_score(y_cal, y_c)
-    rmse_c = sqrt(mean_squared_error(y_cal, y_c))
-    rpd_c = np.std(y_cal)/rmse_c
 
     # Cross-validation
     loocv = LeaveOneOut()
     y_cv = cross_val_predict(pls_opt, X_cal, y_cal, cv=loocv)
     
-    # Stats for cross validation
-    score_cv = r2_score(y_cal, y_cv)
-    rmse_cv = sqrt(mean_squared_error(y_cal, y_cv))
-    rpd_cv = np.std(y_cal)/rmse_cv
-
     if val:
         # For external validation
         y_v = pls_opt.predict(X_val)
-        score_v = r2_score(y_val, y_v)
-        rmse_v = sqrt(mean_squared_error(y_val, y_v))
-        rpd_v = np.std(y_val)/rmse_v
 
-        return (rpd_c, rpd_cv, rpd_v, score_c, score_cv, score_v, rmse_c, rmse_cv, rmse_v)
+        return (y_c, y_cv, y_v)
     
     else:
-        score_v = None
-        rmse_v = None
-        rpd_v = None
+        y_v = None
 
-        return (rpd_c, rpd_cv, rpd_v, score_c, score_cv, score_v, rmse_c, rmse_cv, rmse_v)
+        return (y_c, y_cv, y_v)
 
 
 def loadings_plot():
@@ -202,59 +188,119 @@ def plot_q_t_plot(X, y, ncomp):
  
     plt.show()
 
+def _create_folder(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    else: 
+        filelist = [f for f in os.listdir(path)]
+        for f in filelist:
+            os.remove(os.path.join(path, f))
+
+def _pls_explained_variance(pls, X, Y_true, do_plot=False):
+    r2 = np.zeros(pls.n_components)
+    x_transformed = pls.transform(X) # Project X into low dimensional basis
+    for i in range(0, pls.n_components):
+        Y_pred = (np.dot(x_transformed[:, i][:, np.newaxis],
+                        pls.y_loadings_[:, i][:, np.newaxis].T) * pls._y_std   
+                + pls._y_mean)
+        r2[i] = np.round(r2_score(Y_true, Y_pred)*100, 2)
+        overall_r2 = np.round(r2_score(Y_true, pls.predict(X))*100,2)  # Use all components together
+
+    #x explained variance
+    tot_variance_x = sum(np.var(X, axis=0))
+    variance_x_score = np.var(x_transformed, axis=0)
+    x_explained_variance = np.round(variance_x_score*100/tot_variance_x, 2)
+
+    if do_plot:
+        component = np.arange(pls.n_components) + 1
+        plt.plot(component, r2, '.-')
+        plt.xticks(component)
+        plt.xlabel('PLS Component #'), plt.ylabel('r2')
+        plt.title(f'Summed individual r2: {np.sum(r2):.3f}, '
+                f'Overall r2: {overall_r2:.3f}')
+        plt.show()
+
+    return x_explained_variance, r2, overall_r2
+
+def get_peaks(loadings, height, prominence):
+    positive_peaks,_ = find_peaks(loadings, height = height, prominence = prominence)
+    negative_peaks,_ = find_peaks(-loadings, height = height, prominence = prominence)
+    peaks = np.concatenate((positive_peaks, negative_peaks))
+
+    return peaks
+
+def get_stats(y_true, y_pred):
+    
+    score = r2_score(y_true, y_pred)
+    rmse = sqrt(mean_squared_error(y_true, y_pred))
+    std_y_true= np.std(y_true)
+    rpd = std_y_true/rmse
+
+    return score, rmse, rpd
 
 
-if __name__ == '__main__':
-    drop_columns = ['Technical_rep']
+def get_df_sg(df_cal,X_cal, project_name, wavenumbers):
 
-    #Read CSV and Drop columns
-    df_old = pd.read_csv("data/dil+infogest_mir_all_conc.csv")
-    df = df_old.drop(drop_columns,  axis= 1)
-    df.rename(columns={"Unnamed: 0": "sample_id"}, inplace = True)
+    df_other = df_cal.iloc[:,0:8].reset_index()
+    df_other.drop(['index'], axis=1, inplace=True)
+    df_sg = pd.DataFrame(X_cal, columns = wavenumbers)
+    df_sg = pd.concat([df_other, df_sg], axis=1)
 
-    #Change wavenumber to whole numbers
-    wavenumbers_old = list(df.columns[9:])
-    wavenumbers = list(map(float, wavenumbers_old))
-    wavenumbers = list(map(round, wavenumbers))
-    wavenumbers = list(map(str, wavenumbers))
-    df.rename(columns = dict(zip(wavenumbers_old, wavenumbers)), inplace = True)
+    df_sg.to_excel("data/sg_" + project_name + ".xlsx", index=False)
 
-    #Segment into supernatant and turbid
-    df_turbid = df[df['supernatant'] == "Turbid"]
-    df_SN = df[df['supernatant'] == "Supernatant"]
+    return df_sg
 
-    #Selecting Wavenumbers and assign x and Y values
-    wavenumbers_3998_800 = get_wavenumber_range(wavenumbers, 3998, 800)
-    X = df_SN[wavenumbers_3998_800].values
-    #X = savgol_filter(X, 51, 2, 2)
-    y = df_SN['maltose_concentration'].values
+def create_loadings_plot(starch, y_variable, sample_presentation, wavenumbers, pls, X, Y_true, txt_string, tick_distance, sg_smoothing_point, sg_derivative, height, prominence, path, peaks_on = True):
+    
+    if y_variable not in ["maltose_concentration", "time", "starch_digestibility"]:
+        raise("The Argument Sample presentation should either be 'maltose_concentration', 'starch_digestibility' or 'time'")
 
-    ### LOdings Plot
-    # rpd_c, rpd_cv, score_c, score_cv, rmse_c, rmse_cv, x_load = conduct_pls(4, X, y)
-    # factor1_load = x_load[:,0]
-
-    pls = PLSRegression(n_components=5, scale=False)
-    pls.fit(X, y)
     x_load = pls.x_loadings_
-    factor1_load = x_load[:,0]
 
-    fig, ax = plt.subplots()
-    wavenumbers_3998_800 = list(map(int,wavenumbers_3998_800))
-    ax.plot(wavenumbers_3998_800, factor1_load)
+    x_explained_variance, y_explained_variance, overall_r2 = _pls_explained_variance(pls, X, Y_true)
     
-
-    ax.set_xlabel('Wavenumber (cm-1)')
-    ax.set_ylabel('D2 Absorbance')
-
-    ax.set_title('Loadings Plot')
+    path = path + "/loadings_plots"
+    _create_folder(path)
     
+    for comp in range(x_load.shape[1]):
 
-    ax.ticklabel_format(style='sci', axis = 'y')
-    ax.set_xticks(wavenumbers_3998_800[::100])
-    ax.set_xticklabels(wavenumbers_3998_800[::100])
-    ax.invert_xaxis()
-    ax.set_xlim(3998, 800)
+        factor_load = x_load[:,comp]
+        x_exp_var = x_explained_variance[comp]
+        y_exp_var = y_explained_variance[comp]
 
-    plt.axhline(0, color='black', linewidth = 0.5)
+        fig, ax = plt.subplots()
+        wavenumbers = list(map(int,wavenumbers))
+        ax.plot(wavenumbers, factor_load)
 
-    plt.show()
+        #assigning the peaks
+        if peaks_on:
+            peaks = get_peaks(factor_load, height = height, prominence = prominence)
+            for peak in peaks:
+                ax.plot(wavenumbers[peak], factor_load[peak], "o", color = "red")
+                ax.annotate(wavenumbers[peak], xy = (wavenumbers[peak], factor_load[peak]), xytext = (wavenumbers[peak] + 30, factor_load[peak]+0.0025), size =5)
+
+        ax.set_xlabel('Wavenumber (cm-1)')
+        ax.set_ylabel(f"Factor {comp+1} [{x_exp_var:.2f}%, {y_exp_var:.2f}%]")
+
+        ax.set_title(f"{sample_presentation}")
+
+        ax.tick_params(axis='both', which='major', labelsize=8)
+        ax.set_xticks(wavenumbers[::tick_distance])
+        ax.set_xticklabels(wavenumbers[::tick_distance])
+        ax.invert_xaxis()
+        ax.set_xlim(wavenumbers[0], wavenumbers[-1])
+
+        plt.axhline(0, color='black', linewidth = 0.5)
+        file_name = "/Load_{0}_{1}_{2}_{3}_{4}sg{5}.png".format(comp+1, starch, wavenumbers[0], wavenumbers[-1], sg_derivative, sg_smoothing_point)
+        
+        
+
+        plt.savefig(path+file_name, dpi = 1000)
+
+    with open(path + '/parameters.txt', 'w') as f:
+        f.write(txt_string)
+
+    loadings_string = f"Starch_type: {starch} \nX explained variance: {x_explained_variance} \nY explained variance: {y_explained_variance} \nOverall r2: {overall_r2}"
+    with open(path + '/expl_variance.txt', 'w') as f:
+        f.write(loadings_string)
+
