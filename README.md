@@ -1,4 +1,4 @@
-# PLSR Algorithm for Maltose Concentration Prediction
+# PLSR Algorithm for Maltose Concentration and starch digestibility prediction
 This project contains a python script to optimize partial least squares regression (PLSR) algorithm for Savitzky-Golay hyperparameters applied to mid-infrared spectroscopy data to predict maltose concentration. The data was collected from an in vitro human digestion experiment. Different types of starches (pregelatinized maize, potato, rice, gelose 50, gelose 80) were digested and the samples were collected during the experiment. The predictive model was built to determine the maltose concentration in these samples. 
 
 This is different from the MIR_Maltose_prediction repo as this script analyses data from the two different batches of the in vitro digestion experiments. 
