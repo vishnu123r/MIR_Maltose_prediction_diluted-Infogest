@@ -19,7 +19,7 @@ from math import sqrt
 import os
 
 
-from mir_plsr import pls_explained_variance
+from functions import _pls_explained_variance
 
 ############# ----INPUTS---- ##############
 cal_file_location = "data/dil+infogest_mir_noPr(Infogest)_conc_NoNewSamples.csv"
@@ -50,6 +50,13 @@ peaks_on = False
 txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n"  + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: "  + sample_presentation + "\n" + " loadings_height: " + str(loadings_height) + "\n"
 
 #################
+
+
+if sg_derivative != 0 or sg_smoothing_point != 0:
+    print("Life is good")
+
+quit()
+
 df_cal = pd.read_csv(cal_file_location)
 #df_val = pd.read_csv(val_file_location)
 

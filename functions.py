@@ -130,12 +130,12 @@ def conduct_pls(components, X_cal, X_val, y_cal, y_val, val = False):
         # For external validation
         y_v = pls_opt.predict(X_val)
 
-        return (y_c, y_cv, y_v)
+        return (y_c, y_cv, y_v, pls_opt)
     
     else:
         y_v = None
 
-        return (y_c, y_cv, y_v)
+        return (y_c, y_cv, y_v, pls_opt)
 
 
 def loadings_plot():

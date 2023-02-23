@@ -44,7 +44,7 @@ if __name__ == "__main__":
     tick_parameter = 4.25
     loadings_height = 0.04
     prominence = 0
-    peaks_on = False
+    peaks_on = True
 
     txt_string = " cal_file_location: " + cal_file_location + "\n" + " val_file_location: " + val_file_location + "\n" + " exp_type: " + exp_type + "\n" + " starch: " + starch + "\n" + " y_variable: " + y_variable + "\n" + " start_WN: " + str(start_WN) + "\n" + " end_WN: " + str(end_WN) + "\n" + " sg_smoothing_point: " + str(sg_smoothing_point) + "\n" + " sg_derivative: " + str(sg_derivative) + "\n"  + " sg_polynomial: " + str(sg_polynomial) + "\n" + " no_of_components: " + str(no_of_components) + "\n" + " sample_presentation: "  + sample_presentation + "\n" + " loadings_height: " + str(loadings_height) + "\n"
 
@@ -69,16 +69,15 @@ if __name__ == "__main__":
     
     #X,y arrays - Calibration
     X_cal,y_cal = convert_to_arrays(df_cal, wavenumbers, y_variable = y_variable)
-    if sg_derivative != 0 and sg_smoothing_point != 0:
+    if sg_derivative != 0 or sg_smoothing_point != 0:
         print('Applying SG filter')
         X_cal = apply_sgfilter(X = X_cal, wavenumber_region = wavenumbers, window_length = sg_smoothing_point, poly_order = sg_polynomial, deriv = sg_derivative)
 
 
-    X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state=42)
-
+    X_cal, X_val, y_cal, y_val = train_test_split(X_cal, y_cal, test_size=0.2, random_state= 42)
 
     #Apply PLSR
-    y_c, y_cv, y_ev = conduct_pls(components = no_of_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
+    y_c, y_cv, y_ev, plsr = conduct_pls(components = no_of_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
     score_c, rmse_c, rpd_c = get_stats(y_cal, y_c)
     score_cv, rmse_cv, rpd_cv = get_stats(y_cal, y_cv)
     score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)
@@ -90,27 +89,31 @@ if __name__ == "__main__":
     print("\n")
     print('R2 calib: %5.3f'  % score_c)
     print('R2 CV: %5.3f'  % score_cv)
-    #print('R2 EV: %5.3f'  % score_ev)
+    print('R2 EV: %5.3f'  % score_ev)
     print("\n")
     print('RMSE calib: %5.3f' % rmse_c)
     print('RMSE CV: %5.3f' % rmse_cv)
-    ##print('RMSE EV: %5.3f' % rmse_ev)
+    print('RMSE EV: %5.3f' % rmse_ev)
     print("\n")
     print('RPD calib: %5.3f' % rpd_c)
     print('RPD CV: %5.3f' % rpd_cv)
-    #print('RPD EV: %5.3f' % rpd_ev)
+    print('RPD EV: %5.3f' % rpd_ev)
     print("\n")
 
+    
     path = f"output/{project_name}/{y_variable}/images/{exp_type}/{starch}/{sample_presentation}/{wavenumbers[0]}-{wavenumbers[-1]}/{sg_derivative}sg{sg_smoothing_point}"
-    # stats_string = f"Starch type: {starch} \n sample_size: {X_cal.shape[0]} \n \n R2 calib: {score_c} \n R2 CV: {score_cv} \n \n RMSE calib: {rmse_c} \n RMSE CV: {rmse_cv} \n \n MAE calib: {mae_c} \n MAE CV: {mae_cv} \n \n RPD calib: {rpd_c} \n RPD CV: {rpd_cv}"
-    # with open(path + f'/stats_{starch}.txt', 'w') as f:
-    #     f.write(stats_string)
+    
         
     
-    # create_loadings_plot(starch = starch, y_variable = y_variable, sample_presentation = sample_presentation,
-    # wavenumbers = wavenumbers, pls = plsr, X = X_cal, Y_true =y_cal, txt_string=txt_string, tick_distance = tick_distance, 
-    # sg_derivative=sg_derivative, sg_smoothing_point=sg_smoothing_point, height = loadings_height, prominence = prominence, peaks_on=peaks_on)
+    create_loadings_plot(starch = starch, y_variable = y_variable, sample_presentation = sample_presentation,
+    wavenumbers = wavenumbers, pls = plsr, X = X_cal, Y_true =y_cal, txt_string=txt_string, tick_distance = tick_distance, 
+    sg_derivative=sg_derivative, sg_smoothing_point=sg_smoothing_point, height = loadings_height, prominence = prominence, path = path, peaks_on=peaks_on)
 
+    stats_string = f"Starch type: {starch} \n sample_size: {X_cal.shape[0]} \n \n R2 calib: {score_c} \n R2 CV: {score_cv} \n \n RMSE calib: {rmse_c} \n RMSE CV: {rmse_cv} \n \n RPD calib: {rpd_c} \n RPD CV: {rpd_cv}"
+    with open(path + f'/stats_{starch}.txt', 'w') as f:
+        f.write(stats_string)
+    
+    quit()
 
 
 
