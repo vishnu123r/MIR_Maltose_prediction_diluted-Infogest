@@ -26,7 +26,6 @@ This is different from the MIR_Maltose_prediction repo as this script analyses d
 The script can be modified to use your own mid-infrared spectroscopy data and desired range of hyperparameters. The optimized hyperparameters and predicted maltose concentration will be exported as a CSV file.
 
 ## Known Issues
-- The code for the loadings plot has not been completed yet. 
 - Modification are still required for the README file
 
 ## Authors
