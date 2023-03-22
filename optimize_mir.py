@@ -60,9 +60,10 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
                 y_c, y_cv, y_ev, plsr = conduct_pls(optimum_components, X_cal=X_cal, X_val=X_val, y_cal=y_cal, y_val=y_val, val= True)
                 score_c, rmse_c, rpd_c = get_stats(y_cal, y_c)
                 score_cv, rmse_cv, rpd_cv = get_stats(y_cal, y_cv)
-                score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)                
-                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
-                model_stats_list.append(variable_names), y_cal
+                score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)
+                slope_cv,bias_cv = np.polyfit(y_cal, y_cv, 1)                
+                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev, slope_cv, bias_cv)
+                model_stats_list.append(variable_names)
 
     else:
         for wavenumber_region in wavenumber_regions:
@@ -83,16 +84,17 @@ def apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation, y_vari
                 score_c, rmse_c, rpd_c = get_stats(y_cal, y_c)
                 score_cv, rmse_cv, rpd_cv = get_stats(y_cal, y_cv)
                 score_ev, rmse_ev, rpd_ev = get_stats(y_val, y_ev)
-                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev)
+                slope_cv,bias_cv = np.polyfit(y_cal, y_cv, 1)  
+                variable_names =(wavenumber_string, starch, exp_type, no_samples, sample_presentation, deriv, window, 2, optimum_components, rpd_c, rpd_cv, rpd_ev, score_c, rmse_c, score_cv, rmse_cv, score_ev, rmse_ev, slope_cv,bias_cv)
                 model_stats_list.append(variable_names)
 
-    return model_stats_list, y_cal
+    return model_stats_list, y_cal, y_val
 
 if __name__ == '__main__':
 
     ##### INPUTS ##########
-    y_variable = 'maltose_concentration'
-    data_file = "dil+infogest_mir_noPr(Infogest)_conc_NoNewSamples"
+    y_variable = 'starch_digestibility'
+    data_file = "infogest_mir_noPr(Infogest)_conc_NoNewSamples"
     group = False
 
     ###########################
@@ -125,9 +127,8 @@ if __name__ == '__main__':
 
     #defining Hyper parameters
     wavenumber_regions = [wavenumbers_3998_800, wavenumbers_1500_800, wavenumbers_1250_909, wavenumbers_SN]
-    #sg_parameters = [(0,0), (1,9),(1,7), (1,5), (1,3), (2, 9), (2, 7), (2,5), (1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
-    sg_parameters = [(0,0), (0,3), (0,5), (0,7),(0,9),(0,11), (0, 15),  (0, 21),  (0, 25), (0, 31), (0, 35), (0, 41)]
-
+    sg_parameters = [(0,0), (0,3), (0,5), (0,7),(0,9),(0,11), (0, 15),  (0, 21),  (0, 25), (0, 31), (0, 35), (0, 41), (1,9),(1,7), (1,5), (1,3), (2, 9), (2, 7), (2,5), (1, 11), (1, 15),  (1, 21),  (1, 25), (1, 31), (2, 11), (2, 15), (2, 21), (2, 25), (2, 31), (2, 35), (2, 41)]
+    
     # wavenumber_regions = [wavenumbers_1250_909]
     # sg_parameters = [(0,0)]
 
@@ -136,22 +137,30 @@ if __name__ == '__main__':
     descriptive_y = df_turbid[y_variable].describe().to_frame().T
     descriptive_y['Coe_variation'] = descriptive_y['std']/descriptive_y['mean']
 
-    model_stats_turbid, y_cal_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable, group=group)
-    model_stats_supernatant, y_cal_sn = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable, group=group)
+    model_stats_turbid, y_cal_turbid, y_val_turbid = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Turbid", y_variable = y_variable, group=group)
+    model_stats_supernatant, y_cal_sn, y_val_sn = apply_pls(df, wavenumber_regions, sg_parameters, sample_presentation = "Supernatant", y_variable = y_variable, group=group)
 
-    excel_columns = ['Wavenumber_region', 'Starch', 'Exp_type', 'no_samples', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components", 'rpd_c', 'rpd_cv', 'rpd_ev','Score_c', 'RMSEC', 'Score_CV', 'RMSECV', 'Score_EV', 'RMSE_EV']
+    excel_columns = ['Wavenumber_region', 'Starch', 'Exp_type', 'no_samples', 'Sample_presentation', 'Derivative', 'Window_length', "Polynomial_order", "No_of_components", 'rpd_c', 'rpd_cv', 'rpd_ev','Score_c', 'RMSEC', 'Score_CV', 'RMSECV', 'Score_EV', 'RMSE_EV', 'Slope_CV', 'Bias_CV']
     df_out_turbid = pd.DataFrame.from_records(model_stats_turbid, columns =excel_columns)
     df_out_sn = pd.DataFrame.from_records(model_stats_supernatant, columns =excel_columns)
 
-    descriptive_y_turbid = pd.DataFrame(y_cal_turbid).describe().T
-    descriptive_y_turbid['Coe_variation'] = descriptive_y_turbid['std']/descriptive_y_turbid['mean']
+    descriptive_y_cal_turbid = pd.DataFrame(y_cal_turbid).describe().T
+    descriptive_y_val_turbid = pd.DataFrame(y_val_turbid).describe().T
+    descriptive_y_cal_turbid['Coe_variation'] = descriptive_y_cal_turbid['std']/descriptive_y_cal_turbid['mean']
+    descriptive_y_val_turbid['Coe_variation'] = descriptive_y_val_turbid['std']/descriptive_y_val_turbid['mean']
+    descriptive_y_turbid = pd.concat([descriptive_y_cal_turbid, descriptive_y_val_turbid], axis=0)
 
-    descriptive_y_sn = pd.DataFrame(y_cal_sn).describe().T
-    descriptive_y_sn['Coe_variation'] = descriptive_y_sn['std']/descriptive_y_sn['mean']
+    descriptive_y_cal_sn = pd.DataFrame(y_cal_sn).describe().T
+    descriptive_y_val_sn = pd.DataFrame(y_val_sn).describe().T
+    descriptive_y_cal_sn['Coe_variation'] = descriptive_y_cal_sn['std']/descriptive_y_cal_sn['mean']
+    descriptive_y_val_sn['Coe_variation'] = descriptive_y_val_sn['std']/descriptive_y_val_sn['mean']
+    descriptive_y_sn = pd.concat([descriptive_y_cal_sn, descriptive_y_val_sn], axis=0)
     
-    with pd.ExcelWriter('output/{0}/{1}'.format(y_variable, 'outks1_' + data_file + '_' + y_variable + '_' + str(group)+".xlsx" )) as writer:
+    with pd.ExcelWriter('output/{0}/{1}'.format(y_variable, 'outks_' + data_file + '_' + y_variable + '_' + str(group)+".xlsx" )) as writer:
     #with pd.ExcelWriter("output/test.xlsx" ) as writer:
         descriptive_y_turbid.to_excel(writer, sheet_name='descriptive_stats_mx')
         descriptive_y_sn.to_excel(writer, sheet_name='descriptive_stats_sn')
         df_out_turbid.to_excel(writer, sheet_name='calibration_stats_turbid')
         df_out_sn.to_excel(writer, sheet_name='calibration_stats_sn')
+
+
